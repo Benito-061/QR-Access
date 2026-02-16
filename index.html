@@ -3196,21 +3196,29 @@ Sexe: ${visitor.sexe || 'N/A'}
         function startAlarmSystem() {
             setInterval(function() {
                 const now = new Date();
-                const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
+                const threeMinutesLater = new Date(now.getTime() + 3 * 60000);
 
                 visitors.forEach(visitor => {
-                    // Verifier les invitations expirées (dans la dernière minute)
-                    if (now > visitor.endTime && visitor.endTime > new Date(now.getTime() - 1 * 60000)) {
-                        showAlarm(`${visitor.name} - Invitation Expirée!`, `L'invitation de ${visitor.name} pour ${visitor.location} a expiré.`);
-                    }
-
-                    // Verifier les invitations qui expirent dans les 5 prochaines minutes
-                    if (visitor.endTime <= fiveMinutesLater && visitor.endTime > now) {
+                    // Alerte d'expiration imminente (3 minutes avant)
+                    if (visitor.endTime <= threeMinutesLater && visitor.endTime > now && !visitor.alertedBefore) {
                         const minutesLeft = Math.round((visitor.endTime - now) / 60000);
                         showAlarm(`${visitor.name} - Expire Bientôt!`, `L'invitation expire dans ${minutesLeft} minutes.`, 'warning');
+                        visitor.alertedBefore = true;
+                    }
+
+                    // Alerte d'expiration (au moment exact)
+                    if (now >= visitor.endTime && !visitor.alertedExpired) {
+                        showAlarm(`${visitor.name} - Invitation Expirée!`, `L'invitation de ${visitor.name} pour ${visitor.location} a expiré.`);
+                        visitor.alertedExpired = true;
+                    }
+
+                    // Réinitialiser les drapeaux si l'invitation est loin dans le futur
+                    if (visitor.endTime > threeMinutesLater) {
+                        visitor.alertedBefore = false;
+                        visitor.alertedExpired = false;
                     }
                 });
-            }, 30000); // Verifier toutes les 30 secondes
+            }, 30000); // Vérifier toutes les 30 secondes
         }
 
         // Afficher l'alarme
@@ -3263,9 +3271,21 @@ Sexe: ${visitor.sexe || 'N/A'}
 
         // Rapport Journalier
         function showDailyReport() {
-            const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-            const dailyVisitors = visitors.filter(v => v.date === today);
-            const dailyAccessLog = accessLog.filter(log => log.date === today);
+            const today = new Date();
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+            // Filtrer les visiteurs créés aujourd'hui
+            const dailyVisitors = visitors.filter(v => {
+                const createdDate = new Date(v.createdAt);
+                return createdDate >= todayStart && createdDate < todayEnd;
+            });
+
+            // Filtrer les logs d'accès d'aujourd'hui
+            const dailyAccessLog = accessLog.filter(log => {
+                const logDate = new Date(log.timestamp);
+                return logDate >= todayStart && logDate < todayEnd;
+            });
 
             document.getElementById('reportContent').innerHTML = '<div class="report-section"><div class="report-title">📊 Bilan Journalier</div><div class="report-stats"><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.length + '</div><div class="report-stat-label">Invitations Totales</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => new Date() >= v.startTime && new Date() <= v.endTime).length + '</div><div class="report-stat-label">Actives</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => new Date() > v.endTime).length + '</div><div class="report-stat-label">Expirées</div></div><div class="report-stat"><div class="report-stat-value">' + dailyAccessLog.length + '</div><div class="report-stat-label">Scans Total</div></div></div></div>';
             document.getElementById('reportModal').classList.add('active');
@@ -3279,6 +3299,10 @@ Sexe: ${visitor.sexe || 'N/A'}
             link.download = 'bilan.csv';
             link.click();
             alert('✓ Téléchargé!');
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('active');
         }
 
         function resetInvitations() {
