@@ -1455,9 +1455,10 @@
         }
 
         // Onglet de changement
-        const PROTECTED_PASSWORD = 'Benito2003';
-        let createTabUnlocked = false;
-        let ceremonyTabUnlocked = false;
+        const CREATE_PASSWORD = 'Benito2003';
+        const CEREMONY_PASSWORD = 'Benito061';
+        let createTabUnlocked = localStorage.getItem('createTabUnlocked') === 'true';
+        let ceremonyTabUnlocked = localStorage.getItem('ceremonyTabUnlocked') === 'true';
 
         function switchTab(tabName, buttonElement) {
             // Check password protection for create and ceremonie tabs
@@ -1494,8 +1495,9 @@
         function verifyCreatePassword() {
             const pwd = document.getElementById('createPasswordInput').value;
             const msg = document.getElementById('createPasswordMessage');
-            if (pwd === PROTECTED_PASSWORD) {
+            if (pwd === CREATE_PASSWORD) {
                 createTabUnlocked = true;
+                localStorage.setItem('createTabUnlocked', 'true');
                 document.getElementById('createPasswordModal').style.display = 'none';
                 document.getElementById('createPasswordInput').value = '';
                 // Switch to create tab
@@ -1519,8 +1521,9 @@
         function verifyCeremonyPassword() {
             const pwd = document.getElementById('ceremonyPasswordInput').value;
             const msg = document.getElementById('ceremonyPasswordMessage');
-            if (pwd === PROTECTED_PASSWORD) {
+            if (pwd === CEREMONY_PASSWORD) {
                 ceremonyTabUnlocked = true;
+                localStorage.setItem('ceremonyTabUnlocked', 'true');
                 document.getElementById('ceremonyPasswordModal').style.display = 'none';
                 document.getElementById('ceremonyPasswordInput').value = '';
                 // Switch to ceremonie tab
