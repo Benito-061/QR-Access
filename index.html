@@ -1491,6 +1491,24 @@
         </div>
     </div>
 
+    <!-- Monthly site lock modal -->
+    <div id="monthlyLockModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔒 Verrouillage Mensuel</h2>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <p id="monthlyLockInfo">Le site est verrouillé pour le début du mois. Entrez le mot de passe pour débloquer.</p>
+                <input id="monthlyLockInput" type="password" placeholder=" Veillez entrez le mot de passe " style="padding:10px;border:1px solid var(--border);border-radius:8px;" />
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-secondary" onclick="closeMonthlyLockModal()">Annuler</button>
+                    <button class="btn btn-primary" onclick="verifyMonthlyLock()">Débloquer</button>
+                </div>
+                <div id="monthlyLockMessage" style="color:var(--danger);display:none;margin-top:6px;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Rapport journalier -->
     <div id="reportModal" class="modal">
         <div class="modal-content modal-content-large">
@@ -1599,16 +1617,17 @@
         // Onglet de changement
         const CREATE_PASSWORD = 'Benito2003';
         const CEREMONY_PASSWORD = 'Benito061';
-        
+        const MONTHLY_PASSWORD = 'Benito2003-Benito061';
+
         // Système de détection d'appareil
         function getDeviceFingerprint() {
             return btoa(navigator.userAgent + navigator.language + screen.width + 'x' + screen.height);
         }
-        
+
         function validateDeviceAccess() {
             const currentDevice = getDeviceFingerprint();
             const storedDevice = localStorage.getItem('deviceFingerprint');
-            
+
             if (storedDevice !== currentDevice) {
                 // Nouvel appareil détecté - réinitialiser l'accès
                 localStorage.setItem('deviceFingerprint', currentDevice);
@@ -1619,14 +1638,81 @@
             }
             return true;
         }
-        
+
+        // Verrouillage mensuel
+        function getMonthKey() {
+            const d = new Date();
+            return d.getFullYear() + '-' + (d.getMonth() + 1);
+        }
+
+        function isMonthlyUnlocked() {
+            return localStorage.getItem('monthlyUnlocked') === getMonthKey();
+        }
+
+        function showMonthlyModal() {
+            const m = document.getElementById('monthlyLockModal');
+            if (m) m.style.display = 'flex';
+        }
+
+        function verifyMonthlyLock() {
+            const pwd = document.getElementById('monthlyLockInput').value;
+            const msg = document.getElementById('monthlyLockMessage');
+            if (pwd === MONTHLY_PASSWORD) {
+                // Mark month as unlocked
+                localStorage.setItem('monthlyUnlocked', getMonthKey());
+                monthlyLocked = false;
+
+                // IMPORTANT: do NOT unlock per-tab access when monthly unlock is entered.
+                // Ensure create/ceremony tabs remain locked and clear any stored per-tab unlock flags.
+                localStorage.removeItem('createTabUnlocked');
+                localStorage.removeItem('ceremonyTabUnlocked');
+                createTabUnlocked = false;
+                ceremonyTabUnlocked = false;
+
+                document.getElementById('monthlyLockModal').style.display = 'none';
+                document.getElementById('monthlyLockInput').value = '';
+                if (msg) msg.style.display = 'none';
+            } else {
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.textContent = 'Mot de passe incorrect';
+                }
+            }
+        }
+
+        function closeMonthlyLockModal() {
+            const m = document.getElementById('monthlyLockModal');
+            if (m) m.style.display = 'none';
+            const input = document.getElementById('monthlyLockInput');
+            if (input) input.value = '';
+            const msg = document.getElementById('monthlyLockMessage');
+            if (msg) msg.style.display = 'none';
+        }
+
         // Valider l'appareil au chargement
         validateDeviceAccess();
-        
+
+        // Forcer le verrouillage mensuel au début du mois si besoin
+        let monthlyLocked = !isMonthlyUnlocked();
+        if (monthlyLocked) {
+            // Remove per-tab unlocks when site is monthly-locked
+            localStorage.removeItem('createTabUnlocked');
+            localStorage.removeItem('ceremonyTabUnlocked');
+            // Show modal once DOM is ready
+            document.addEventListener('DOMContentLoaded', showMonthlyModal);
+        }
+
         let createTabUnlocked = localStorage.getItem('createTabUnlocked') === 'true';
         let ceremonyTabUnlocked = localStorage.getItem('ceremonyTabUnlocked') === 'true';
 
         function switchTab(tabName, buttonElement) {
+            // Monthly site lock check
+            if (monthlyLocked) {
+                const m = document.getElementById('monthlyLockModal');
+                if (m) m.style.display = 'flex';
+                return;
+            }
+
             // Check password protection for create and ceremonie tabs
             if (tabName === 'create' && !createTabUnlocked) {
                 document.getElementById('createPasswordModal').style.display = 'flex';
@@ -1872,6 +1958,11 @@
         function createVisitor(e) {
             e.preventDefault();
 
+            if (typeof monthlyLocked !== 'undefined' && monthlyLocked) {
+                showMonthlyModal();
+                return;
+            }
+
             // Generer un code de 5 chiffres
             const quickCode = String(Math.floor(10000 + Math.random() * 90000));
 
@@ -1932,6 +2023,10 @@
         // Cree une Ceremonie
         function createCeremony(e) {
             e.preventDefault();
+            if (typeof monthlyLocked !== 'undefined' && monthlyLocked) {
+                showMonthlyModal();
+                return;
+            }
             console.log('createCeremony called');
 
             const quickCode = String(Math.floor(10000 + Math.random() * 90000));
