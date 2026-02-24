@@ -661,6 +661,7 @@
             border: 1px solid rgba(255, 255, 255, 0.5);
             animation: fadeIn 0.8s ease-out;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
 
         .stat-box:hover {
@@ -935,27 +936,27 @@
         <!-- Tableau de bord -->
         <div id="dashboard" class="tab-content active">
             <div class="stats-grid" id="statsGrid">
-                <div class="stat-box">
+                <div class="stat-box" onclick="showDetailsList('active')">
                     <div class="stat-label">Rendez-vous Actifs</div>
                     <div class="stat-value" id="activeCount">0</div>
                 </div>
-                <div class="stat-box">
+                <div class="stat-box" onclick="showDetailsList('created')">
                     <div class="stat-label">Total Créés</div>
                     <div class="stat-value" id="totalCount">0</div>
                 </div>
-                <div class="stat-box">
+                <div class="stat-box" onclick="showDetailsList('expiring')">
                     <div class="stat-label">Expirations Proches</div>
                     <div class="stat-value" id="expiringCount">0</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-label">Accès Aujourd'hui</div>
-                    <div class="stat-value" id="accessCount">0</div>
+                <div class="stat-box" onclick="showDetailsList('ceremony')">
+                    <div class="stat-label">Cérémonies Actives</div>
+                    <div class="stat-value" id="ceremonyCount">0</div>
                 </div>
             </div>
 
             <div class="main-content">
                 <div class="card">
-                    <h2>Rendez-vous Actifs</h2>
+                    <h2>Total Actifs</h2>
                     <div class="visitors-grid" id="visitorsActive"></div>
                 </div>
 
@@ -1233,8 +1234,8 @@
                                 <option value="Professeur">Proff.</option>
                                 <option value="Honorable">Hon.</option>
                                 <option value="Mgr">Mgr.</option>
-                                <option value="Ingenieur">Ingenieur.</option>
-                                <option value="Docteur">Docteur.</option>
+                                <option value="Ingenieur">Ir.</option>
+                                <option value="Docteur">Dr.</option>
                             </select>
                         </div>
 
@@ -1540,6 +1541,22 @@
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="closeResetModal()">Annuler</button>
                 <button class="btn btn-danger" onclick="confirmResetInvitations()">Réinitialiser</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour afficher les détails des rendez-vous et cérémonies -->
+    <div id="detailsListModal" class="modal">
+        <div class="modal-content modal-content-large">
+            <div class="modal-header">
+                <h2 class="modal-title" id="detailsListTitle">Détails</h2>
+                <button class="modal-close" onclick="closeDetailsListModal()">✕</button>
+            </div>
+            <div id="detailsListContent" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Les détails seront remplis par JavaScript -->
+            </div>
+            <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeDetailsListModal()">Fermer</button>
             </div>
         </div>
     </div>
@@ -2363,6 +2380,27 @@
             link.click();
         }
 
+        // Télécharger le QR code depuis la vérification
+        function downloadVerifyQR(visitorId) {
+            const qrDiv = document.getElementById('verifyQRCode');
+            if (!qrDiv) return;
+
+            const canvas = qrDiv.querySelector('canvas');
+            if (!canvas) {
+                alert('Pas de QR Code à télécharger');
+                return;
+            }
+
+            const dataUrl = canvas.toDataURL();
+            const visitor = visitors.find(v => v.id === visitorId);
+            if (!visitor) return;
+
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = `QR_${visitor.name}_${Date.now()}.png`;
+            link.click();
+        }
+
         // Imprimer le QR Code
         function printQR() {
             if (!currentQRCode) return;
@@ -2757,15 +2795,19 @@
             const resultDiv = document.getElementById('verifyResult');
             const contentDiv = document.getElementById('verifyContent');
 
+            // Afficher le bouton imprimer avant tout résultat
+            resultDiv.style.display = 'block';
+            contentDiv.innerHTML = `<div id="verifyPrintBtnContainer" style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;"></div>`;
+
             if (!visitor) {
-                resultDiv.style.display = 'block';
-                contentDiv.innerHTML = `
+                document.getElementById('verifyPrintBtnContainer').innerHTML = '';
+                contentDiv.innerHTML += `
                     <div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
                         <div style="font-size: 48px; margin-bottom: 10px;">✗</div>
                         <div style="font-weight: 600; color: #ef4444; margin-bottom: 5px;">Code Non Trouvé</div>
                         <p style="color: #991b1b; font-size: 14px;">Aucune invitation ne correspond à ce code</p>
                     </div>
-                `;;
+                `;
                 document.getElementById('verifyCode').value = '';
                 return;
             }
@@ -2807,7 +2849,8 @@
 
             // Afficher un message de duplication pour les cérémonies déjà scannées, sinon afficher les détails de validation ou de refus
             if (isDuplicate) {
-                contentDiv.innerHTML = `
+                document.getElementById('verifyPrintBtnContainer').innerHTML = `<button class="btn btn-primary btn-small" onclick="printVisitorCard('${visitor.id}')">🖨️ Imprimer la Fiche</button>`;
+                contentDiv.innerHTML += `
                     <div style="background: linear-gradient(135deg, #fef08a 0%, #fde047 100%); border: 3px solid #f59e0b; border-radius: 12px; padding: 25px; animation: slideInRight 0.3s ease-out;">
                         <div style="font-size: 64px; margin-bottom: 15px; text-align: center;">⚠️</div>
                         <div style="font-weight: 700; color: #f59e0b; margin-bottom: 20px; text-align: center; font-size: 24px;">Duplic</div>
@@ -2834,16 +2877,21 @@
                         <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; font-size: 13px; color: #92400e; font-weight: 600; text-align: center;">
                             ⚠️ Attention: Ce code QR a déjà été scanné auparavant!
                         </div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                            <!-- Bouton Imprimer supprimé ici, gardé uniquement en haut -->
+                        </div>
                     </div>
                 `;
             } else if (isValid) {
                 // Verifier si c'est une cérémonie et générer l'affichage spécifique, sinon afficher les détails génériques du visiteur
                 const ceremonyDisplay = generateVerificationDisplay(visitor, true, timeRemaining, isExpired, isComing, photoDisplay);
                 if (ceremonyDisplay) {
-                    contentDiv.innerHTML = ceremonyDisplay;
+                    document.getElementById('verifyPrintBtnContainer').innerHTML = `<button class="btn btn-primary btn-small" onclick="printVisitorCard('${visitor.id}')">🖨️ Imprimer la Fiche</button>`;
+                    contentDiv.innerHTML += ceremonyDisplay;
                 } else {
                     // Defaut pour les visiteurs non cérémonies
-                    contentDiv.innerHTML = `
+                    document.getElementById('verifyPrintBtnContainer').innerHTML = `<button class="btn btn-primary btn-small" onclick="printVisitorCard('${visitor.id}')">🖨️ Imprimer la Fiche</button>`;
+                    contentDiv.innerHTML += `
                     <div style="background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); border: 3px solid #10b981; border-radius: 12px; padding: 25px; animation: slideInRight 0.3s ease-out;">
                         <div style="font-size: 64px; margin-bottom: 15px; text-align: center;">✓</div>
                         <div style="font-weight: 700; color: #10b981; margin-bottom: 20px; text-align: center; font-size: 20px;">Accès Autorisé</div>
@@ -2897,11 +2945,27 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px; font-size: 13px; color: #15803d; font-weight: 600;">
+                        <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px; font-size: 13px; color: #15803d; font-weight: 600; margin-bottom: 15px;">
                             ✓ Invitation valide et active - Accès Autorisé
+                        </div>
+                        <!-- QR code supprimé ici, il sera affiché uniquement sur la fiche imprimée -->
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <!-- Bouton Imprimer supprimé ici, gardé uniquement en haut -->
                         </div>
                     </div>
                 `;
+                // Générer le QR code pour la vérification
+                setTimeout(() => {
+                    const qrDiv = document.getElementById('verifyQRCode');
+                    if (qrDiv) new QRCode(qrDiv, {
+                        text: visitor.id,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#10b981",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                }, 100);
                 }
                 playSound('success');
             } else {
@@ -2924,7 +2988,8 @@
                         reasonDetails = `Expiré il y a ${hoursExpired > 0 ? hoursExpired + 'h ' : ''}${minutesExpired % 60}m`;
                     }
                     
-                    contentDiv.innerHTML = `
+                    document.getElementById('verifyPrintBtnContainer').innerHTML = `<button class="btn btn-primary btn-small" onclick="printVisitorCard('${visitor.id}')">🖨️ Imprimer la Fiche</button>`;
+                    contentDiv.innerHTML += `
                         <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 3px solid #ef4444; border-radius: 12px; padding: 25px; animation: slideInRight 0.3s ease-out;">
                             <div style="font-size: 64px; margin-bottom: 15px; text-align: center;">✗</div>
                             <div style="font-weight: 700; color: #ef4444; margin-bottom: 20px; text-align: center; font-size: 20px;">Accès Refusé</div>
@@ -2974,6 +3039,9 @@
                             <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; border-radius: 4px; font-size: 13px; color: #991b1b; font-weight: 600;">
                                 ✗ Accès non autorisé - Merci de contacter l'administrateur
                             </div>
+                            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                                <!-- Bouton Imprimer supprimé ici, gardé uniquement en haut -->
+                            </div>
                         </div>
                     `;
                 }
@@ -2999,6 +3067,7 @@
         function updateDashboard() {
             const now = new Date();
             let activeCount = 0;
+            let ceremonyCount = 0;
             let expiringCount = 0;
             const oneHourLater = new Date(now.getTime() + 60 * 60000);
 
@@ -3006,6 +3075,12 @@
             const expiringHtml = [];
 
             visitors.forEach(v => {
+                if (v.category === 'ceremonie') {
+                    if (now >= v.startTime && now <= v.endTime) {
+                        ceremonyCount++;
+                    }
+                }
+
                 if (now >= v.startTime && now <= v.endTime) {
                     activeCount++;
                     activeHtml.push(createVisitorHTML(v, false));
@@ -3020,11 +3095,7 @@
             document.getElementById('activeCount').textContent = activeCount;
             document.getElementById('totalCount').textContent = visitors.length;
             document.getElementById('expiringCount').textContent = expiringCount;
-            document.getElementById('accessCount').textContent = accessLog.filter(l => {
-                const logDate = new Date(l.timestamp);
-                const today = new Date();
-                return logDate.toDateString() === today.toDateString();
-            }).length;
+            document.getElementById('ceremonyCount').textContent = ceremonyCount;
 
             document.getElementById('visitorsActive').innerHTML = activeHtml.length ? activeHtml.join('') : '<p style="text-align: center; color: var(--dark); opacity: 0.5;">Aucun rendez-vous actif</p>';
             document.getElementById('visitorsExpiring').innerHTML = expiringHtml.length ? expiringHtml.join('') : '<p style="text-align: center; color: var(--dark); opacity: 0.5;">Aucune expiration proche</p>';
@@ -3321,6 +3392,294 @@ Sexe: ${visitor.sexe || 'N/A'}
             closeResetModal();
             updateDashboard();
             alert('✓ Réinitialisé!');
+        }
+
+        // Afficher la liste des détails selon le type
+        function showDetailsList(type) {
+            const now = new Date();
+            const oneHourLater = new Date(now.getTime() + 60 * 60000);
+            let filteredVisitors = [];
+            let title = '';
+
+            if (type === 'active') {
+                title = '📌 Rendez-vous Actifs';
+                filteredVisitors = visitors.filter(v => now >= v.startTime && now <= v.endTime && v.category !== 'ceremonie');
+            } else if (type === 'created') {
+                title = '📋 Total Créés';
+                filteredVisitors = visitors.filter(v => v.category !== 'ceremonie');
+            } else if (type === 'expiring') {
+                title = '⏰ Expirations Proches';
+                filteredVisitors = visitors.filter(v => now <= v.endTime && v.endTime <= oneHourLater);
+            } else if (type === 'ceremony') {
+                title = '🎉 Cérémonies Actives';
+                filteredVisitors = visitors.filter(v => v.category === 'ceremonie' && now >= v.startTime && now <= v.endTime);
+            }
+
+            document.getElementById('detailsListTitle').textContent = title;
+
+            if (filteredVisitors.length === 0) {
+                document.getElementById('detailsListContent').innerHTML = '<p style="text-align: center; color: var(--dark); opacity: 0.6; padding: 40px;">Aucun élément à afficher</p>';
+            } else {
+                let htmlContent = '';
+                filteredVisitors.forEach(v => {
+                    const endTimeStr = new Date(v.endTime).toLocaleString('fr-FR');
+                    const photoHtml = v.photo ? `<img src="${v.photo}" alt="${v.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">` : '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>';
+                    let infoGrid = '';
+                    if (v.sexe) infoGrid += `<div><strong>Sexe:</strong> ${v.sexe}</div>`;
+                    if (v.phone) infoGrid += `<div><strong>Téléphone:</strong> ${v.phone}</div>`;
+                    if (v.email) infoGrid += `<div><strong>Email:</strong> ${v.email}</div>`;
+                    if (v.type) infoGrid += `<div><strong>Type:</strong> ${v.type}</div>`;
+                    if (v.location) infoGrid += `<div><strong>Lieu:</strong> ${v.location}</div>`;
+                    if (v.service) infoGrid += `<div><strong>Service:</strong> ${v.service}</div>`;
+                    if (v.quickCode) infoGrid += `<div><strong>Code Rapide:</strong> <span style="color: #0ea5e9; font-weight: 600;">${v.quickCode}</span></div>`;
+                    if (v.endTime) infoGrid += `<div><strong>Fin Valid:</strong> ${new Date(v.endTime).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>`;
+                    htmlContent += `
+                        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 15px; background: rgba(255, 250, 240, 0.5); display: flex; gap: 20px; position: relative;">
+                            <button class="btn btn-primary btn-small" style="position: absolute; top: 10px; right: 10px; z-index: 2;" onclick="printCeremonyCard('${v.id}')">🖨️ Imprimer</button>
+                            <div>${photoHtml}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 16px; margin-bottom: 10px; color: var(--dark);">${v.name}</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">${infoGrid}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                document.getElementById('detailsListContent').innerHTML = htmlContent;
+            }
+
+            document.getElementById('detailsListModal').classList.add('active');
+        }
+
+        // Fermer le modal de détails
+        function closeDetailsListModal() {
+            document.getElementById('detailsListModal').classList.remove('active');
+        }
+
+        // Imprimer la fiche du visiteur
+        function printVisitorCard(visitorId) {
+            const visitor = visitors.find(v => v.id === visitorId);
+            if (!visitor) return;
+            const printWindow = window.open('', '_blank');
+            const title = `Fiche Visiteur - ${visitor.name}`;
+            const photoHtml = visitor.photo ? `<img src="${visitor.photo}" alt="${visitor.name}" style="width: 70px; height: 70px; border-radius: 8px; object-fit: cover; border: 2px solid #0ea5e9;">` : '<div style="width: 70px; height: 70px; background: #e5e7eb; border-radius: 8px; border: 2px solid #0ea5e9; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>';
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(visitor.id)}`;
+            let infoGrid = '';
+            let fields = [
+                { key: 'sexe', label: 'Sexe' },
+                { key: 'phone', label: 'Téléphone' },
+                { key: 'email', label: 'Email' },
+                { key: 'type', label: 'Type' },
+                { key: 'location', label: 'Lieu' },
+                { key: 'service', label: 'Service' },
+                { key: 'requestNumber', label: 'Numéro de Demande' },
+                { key: 'scans', label: 'Total Scans', custom: v => v.scans && v.scans.length ? v.scans.length : null },
+                { key: 'startTime', label: 'Début', custom: v => v.startTime ? new Date(v.startTime).toLocaleString('fr-FR') : null },
+                { key: 'endTime', label: 'Fin', custom: v => v.endTime ? new Date(v.endTime).toLocaleString('fr-FR') : null }
+            ];
+            // Ajout dynamique : place attitrée ou code rapide
+            if (visitor.category === 'ceremonie') {
+                if (visitor.cerPlace) {
+                    fields.splice(6, 0, { key: 'cerPlace', label: 'Place Attitrée' });
+                }
+                if (visitor.cerCapacity) {
+                    fields.splice(7, 0, { key: 'cerCapacity', label: 'Nombre de Personnes' });
+                }
+            } else if (visitor.quickCode) {
+                fields.splice(6, 0, { key: 'quickCode', label: 'Code Rapide' });
+            }
+            fields.forEach(f => {
+                let value = f.custom ? f.custom(visitor) : visitor[f.key];
+                if (value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+                    infoGrid += `<div class="info-item"><span class="info-label">${f.label}</span> <span class="info-value">${value}</span></div>`;
+                }
+            });
+            printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    padding: 0;
+                    margin: 0;
+                    background: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 100%);
+                }
+                .print-card {
+                    max-width: 350px;
+                    margin: 40px auto;
+                    background: #fff;
+                    border-radius: 20px;
+                    box-shadow: 0 8px 32px rgba(14,165,233,0.18);
+                    border: 4px solid #38bdf8;
+                    padding: 24px 24px 16px 24px;
+                    position: relative;
+                    transition: box-shadow 0.3s;
+                }
+                .print-card:hover {
+                    box-shadow: 0 12px 40px rgba(14,165,233,0.28);
+                }
+                .print-icon {
+                    position: absolute;
+                    top: -22px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 38px;
+                    color: #38bdf8;
+                    background: #fff;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 12px rgba(14,165,233,0.12);
+                    padding: 6px;
+                    z-index: 2;
+                }
+                .print-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 18px;
+                    border-bottom: 2px solid #38bdf8;
+                    padding-bottom: 12px;
+                    margin-bottom: 16px;
+                }
+                .print-photo {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                    border: 3px solid #38bdf8;
+                    background: #e0f2fe;
+                    box-shadow: 0 2px 8px rgba(56,189,248,0.08);
+                }
+                .print-qr {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 12px;
+                    border: 3px solid #a21caf;
+                    background: #f3e8ff;
+                    box-shadow: 0 2px 8px rgba(162,28,175,0.08);
+                }
+                .print-title {
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: #38bdf8;
+                    margin: 0;
+                    letter-spacing: 1.5px;
+                    text-shadow: 0 1px 2px #e0f2fe;
+                }
+                .print-info-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                }
+                .print-info-item {
+                    background: linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%);
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border-left: 5px solid #38bdf8;
+                    font-size: 15px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    box-shadow: 0 1px 4px rgba(14,165,233,0.06);
+                    transition: background 0.2s;
+                }
+                .print-info-item:hover {
+                    background: linear-gradient(90deg, #bae6fd 0%, #e9d5ff 100%);
+                }
+                .print-info-label {
+                    font-size: 12px;
+                    text-transform: uppercase;
+                    color: #a21caf;
+                    font-weight: 700;
+                    letter-spacing: 0.5px;
+                }
+                .print-info-value {
+                    font-size: 15px;
+                    color: #0f172a;
+                    font-weight: 600;
+                }
+                .print-footer {
+                    text-align: center;
+                    color: #a21caf;
+                    font-size: 13px;
+                    margin-top: 16px;
+                    border-top: 1px solid #e0f2fe;
+                    padding-top: 8px;
+                    letter-spacing: 0.5px;
+                    background: linear-gradient(90deg, #e0f2fe 0%, #f3e8ff 100%);
+                    border-radius: 0 0 16px 16px;
+                }
+            </style></head><body>`);
+            printWindow.document.write(`
+                <div class="print-card">
+                    <div class="print-icon"></div>
+                    <div class="print-header">
+                        <img class="print-photo" src="${visitor.photo ? visitor.photo : ''}" alt="Photo">
+                        <img class="print-qr" src="${qrApiUrl}" alt="QR Code">
+                        <div style="flex:1;">
+                            <div class="print-title">${visitor.name}</div>
+                        </div>
+                    </div>
+                    <div class="print-info-grid">
+                        ${infoGrid.replace(/info-item/g,'print-info-item').replace(/info-label/g,'print-info-label').replace(/info-value/g,'print-info-value')}
+                    </div>
+                    <div class="print-footer">Fiche générée le ${new Date().toLocaleString('fr-FR')}</div>
+                </div>
+            </body></html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 300);
+        }
+
+        // Imprimer la fiche de cérémonie
+        function printCeremonyCard(ceremonyId) {
+            const ceremony = visitors.find(v => v.id === ceremonyId);
+            if (!ceremony) return;
+            const printWindow = window.open('', '_blank');
+            const title = `Fiche Cérémonie - ${ceremony.name}`;
+            const photoHtml = ceremony.photo ? `<img src="${ceremony.photo}" alt="${ceremony.name}" style="width: 70px; height: 70px; border-radius: 8px; object-fit: cover; border: 2px solid #0ea5e9;">` : '<div style="width: 70px; height: 70px; background: #e5e7eb; border-radius: 8px; border: 2px solid #0ea5e9; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>';
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(ceremony.id)}`;
+            let infoGrid = '';
+            const fields = [
+                { key: 'sexe', label: 'Sexe' },
+                { key: 'phone', label: 'Téléphone' },
+                { key: 'email', label: 'Email' },
+                { key: 'type', label: 'Type' },
+                { key: 'location', label: 'Lieu' },
+                { key: 'service', label: 'Service' },
+                { key: 'cerPlace', label: 'Place Attitrée' },
+                { key: 'quickCode', label: 'Code Rapide' },
+                { key: 'requestNumber', label: 'Numéro de Demande' },
+                { key: 'scans', label: 'Total Scans', custom: v => v.scans && v.scans.length ? v.scans.length : null },
+                { key: 'startTime', label: 'Début', custom: v => v.startTime ? new Date(v.startTime).toLocaleString('fr-FR') : null },
+                { key: 'endTime', label: 'Fin', custom: v => v.endTime ? new Date(v.endTime).toLocaleString('fr-FR') : null }
+            ];
+            fields.forEach(f => {
+                let value = f.custom ? f.custom(ceremony) : ceremony[f.key];
+                if (value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+                    infoGrid += `<div class="info-item"><span class="info-label">${f.label}</span> <span class="info-value">${value}</span></div>`;
+                }
+            });
+            printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>
+                body{font-family: Arial, sans-serif; padding: 10px; background: white;}
+                .card{max-width: 220px; min-width: 180px; margin: 0 auto; border: 1px solid #0ea5e9; border-radius: 10px; padding: 10px 10px 6px 10px; background: #f9fafb;}
+                .header{display: flex; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px solid #0ea5e9; padding-bottom: 6px;}
+                .photo-section{flex-shrink: 0;}
+                .qr-section{flex-shrink: 0;}
+                .info-section{flex: 1;}
+                h1{color: #0f172a; margin: 0 0 4px 0; font-size: 13px;}
+                .info-grid{display: grid; grid-template-columns: 1fr; gap: 2px; margin-bottom: 2px;}
+                .info-item{background: white; padding: 2px 4px; border-radius: 3px; border-left: 2px solid #0ea5e9; font-size: 9px;}
+                .info-label{font-size: 8px; text-transform: uppercase; color: #0ea5e9; font-weight: 600; margin-bottom: 1px;}
+                .info-value{font-size: 9px; color: #1f2937; font-weight: 600;}
+                .timestamp{text-align: center; color: #6b7280; font-size: 8px; margin-top: 4px; border-top: 1px solid #e5e7eb; padding-top: 2px;}
+            </style></head><body>`);
+            printWindow.document.write(`<div class="card">
+                <div class="header">
+                    <div class="photo-section">${photoHtml}</div>
+                    <div class="qr-section"><img src="${qrApiUrl}" alt="QR Code" width="70" height="70"></div>
+                    <div class="info-section"><h1>${ceremony.name}</h1></div>
+                </div>
+                <div class="info-grid">${infoGrid}</div>
+                <div class="timestamp">Fiche générée le ${new Date().toLocaleString('fr-FR')}</div>
+            </div></body></html>`);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 300);
         }
     </script>
 </body>
