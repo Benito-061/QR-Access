@@ -120,22 +120,64 @@
 
         .header-content {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
+            gap: 18px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            justify-content: center;
+            gap: 18px;
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            width: 100%;
+            position: relative;
+            padding: 18px 0;
+            background: none;
+        }
+        .logo-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            box-shadow: 0 6px 24px rgba(0,201,183,0.18);
+            animation: float 2.5s ease-in-out infinite, pulse 2s infinite;
+            border: 3px solid var(--secondary);
+        }
+        .logo-text {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 40%, var(--accent) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-fill-color: transparent;
+            animation: shimmer 2.5s linear infinite;
+            padding: 0 8px;
+            font-size: 36px;
+            font-weight: 900;
+            text-shadow: 0 2px 8px rgba(0,201,183,0.08);
+        }
+        .logo::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 100%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 8px;
+            background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary));
+            filter: blur(8px);
+            opacity: 0.35;
+            border-radius: 8px;
+            z-index: 0;
         }
 
         .logo-icon {
@@ -154,6 +196,9 @@
         .nav-tabs {
             display: flex;
             gap: 10px;
+            justify-content: center;
+            width: 100%;
+            flex-wrap: wrap;
         }
 
         .nav-tab {
@@ -921,7 +966,7 @@
             <div class="header-content">
                 <div class="logo">
                     <div class="logo-icon">🎫</div>
-                    QR Access Manager
+                    <span class="logo-text">QR Access Manager</span>
                 </div>
                 <div class="nav-tabs">
                     <button class="nav-tab active" onclick="switchTab('dashboard', this)">📊 Tableau de bord</button>
@@ -929,6 +974,7 @@
                     <button class="nav-tab" onclick="switchTab('ceremonie', this)">🎉 Ajouter une cérémonie</button>
                     <button class="nav-tab" onclick="switchTab('verify', this)">✓ Vérifier</button>
                     <button class="nav-tab" onclick="switchTab('history', this)">📜 Historique</button>
+                    <button class="nav-tab" onclick="openAboutModal()">ℹ️ A propos</button>
                 </div>
             </div>
         </header>
@@ -1561,7 +1607,48 @@
         </div>
     </div>
 
+    <!-- Modal A propos -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content" style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); box-shadow: 0 8px 32px rgba(0,201,183,0.18); border: none; position: relative; overflow: visible;">
+            <div class="modal-header" style="background: rgba(255,255,255,0.85); border-radius: 16px 16px 0 0; box-shadow: 0 2px 8px rgba(0,201,183,0.08); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0; position: relative;">
+                <h2 class="modal-title" style="font-size: 28px; font-weight: 900; background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-fill-color: transparent; letter-spacing: 2px; margin: 0 auto; text-align: center; flex: 1;">À propos</h2>
+                <button class="modal-close" onclick="closeAboutModal()" style="font-size: 28px; color: var(--accent); background: none; border: none; position: absolute; right: 18px; top: 50%; transform: translateY(-50%);">✕</button>
+            </div>
+            <div style="padding: 32px 0 24px 0; color: var(--dark); text-align: center; position: relative;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                    <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%); box-shadow: 0 4px 16px rgba(255,180,71,0.18); display: flex; align-items: center; justify-content: center; margin-bottom: 8px; animation: float 2.5s infinite;">
+                        <span style="font-size: 48px; color: white;">👤</span>
+                    </div>
+                    <span style="font-size: 22px; font-weight: 700; background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-fill-color: transparent; letter-spacing: 1px;">BUYBUY UWASE Benit</span>
+                    <span style="display: inline-block; background: var(--accent); color: white; font-size: 13px; font-weight: 600; padding: 4px 16px; border-radius: 16px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(255,111,97,0.12);">GateFlow Solutions</span>
+                    <a href="mailto:qraccess@gmail.com" style="display: inline-block; background: var(--primary); color: white; font-size: 14px; font-weight: 600; padding: 4px 16px; border-radius: 16px; margin-bottom: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,201,183,0.12);">qraccess@gmail.com</a>
+                </div>
+                <div style="margin: 24px 0 16px 0;">
+                    <p style="font-size: 16px; font-weight: 500; color: var(--dark);">QR-Access propose des solutions innovantes pour la gestion d'accès, la génération et la vérification de QR codes pour événements, entreprises et organisations.</p>
+                </div>
+                <div style="margin: 16px 0;">
+                    <span style="display: inline-block; background: var(--secondary); color: var(--dark); font-size: 13px; font-weight: 600; padding: 4px 16px; border-radius: 16px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(255,180,71,0.12);">© 2026 QR-Access Manager Solution. Tous droits réservés.</span>
+                </div>
+                <div style="margin: 16px 0;">
+                    <span style="font-size: 15px; color: var(--dark); font-weight: 600;">Nous contacter :</span>
+                    <div style="margin-top: 8px;">
+                        <span style="display: inline-block; background: var(--success); color: white; font-size: 14px; font-weight: 600; padding: 4px 16px; border-radius: 16px; margin-bottom: 8px; box-shadow: 0 2px 8px rgba(67,233,123,0.12);">+243 991 048 061</span>
+                        <span style="display: inline-block; background: var(--accent); color: white; font-size: 14px; font-weight: 600; padding: 4px 16px; border-radius: 16px; margin-bottom: 8px; margin-left: 8px; box-shadow: 0 2px 8px rgba(255,111,97,0.12);">+243 901 869 926</span>
+                    </div>
+                </div>
+                <div style="position: absolute; left: 0; right: 0; bottom: -18px; height: 18px; background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary)); filter: blur(8px); opacity: 0.25; border-radius: 8px;"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
+                // Modal A propos
+                function openAboutModal() {
+                    document.getElementById('aboutModal').style.display = 'flex';
+                }
+                function closeAboutModal() {
+                    document.getElementById('aboutModal').style.display = 'none';
+                }
         // Son spécifique pour chaque onglet
         document.addEventListener('DOMContentLoaded', function() {
             document.body.addEventListener('click', function(e) {
