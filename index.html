@@ -14,21 +14,21 @@
         }
 
         :root {
-            --primary: #0ea5e9;
-            --secondary: #06b6d4;
-            --accent: #14b8a6;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --dark: #0f172a;
-            --light: #f8fafc;
-            --surface: #fffaf0;
-            --border: #cbd5e1;
+            --primary: #00c9b7;
+            --secondary: #ffb347;
+            --accent: #ff6f61;
+            --success: #43e97b;
+            --danger: #ff3a3a;
+            --warning: #ffd166;
+            --dark: #232946;
+            --light: #f6f7fb;
+            --surface: #f9f9f9;
+            --border: #c7d2fe;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #0ea5e9 100%);
+            background: linear-gradient(135deg, #00c9b7 0%, #ffb347 100%);
             min-height: 100vh;
             color: var(--dark);
             overflow-x: hidden;
@@ -253,7 +253,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 30px;
-            animation: slideInRight 0.6s ease-out;
+            /* animation supprimée */
         }
 
         @media (max-width: 1024px) {
@@ -270,7 +270,7 @@
             padding: 30px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            animation: fadeIn 0.8s ease-out;
+            /* animation supprimée */
             transition: all 0.3s ease;
         }
 
@@ -299,7 +299,7 @@
         /* Forms */
         .form-group {
             margin-bottom: 20px;
-            animation: fadeIn 0.8s ease-out;
+            /* animation supprimée */
         }
 
         label {
@@ -442,11 +442,11 @@
         }
 
         #ceremonie h2 {
-            color: #e11d48;
+            color: #ee953d;
         }
 
         #ceremonie .btn-primary {
-            background: linear-gradient(135deg, #e11d48 0%, #fb7185 100%);
+            background: linear-gradient(135deg, #b67a87 0%, #fb7185 100%);
             box-shadow: 0 10px 30px rgba(225,29,72,0.12);
         }
 
@@ -461,7 +461,7 @@
         }
 
         #qrCerQuickCode {
-            color: #be123c;
+            color: #c88e3e;
         }
 
         #mariageFields {
@@ -659,7 +659,7 @@
             padding: 25px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.5);
-            animation: fadeIn 0.8s ease-out;
+            /* animation: fadeIn 0.8s ease-out; */
             transition: all 0.3s ease;
             cursor: pointer;
         }
@@ -695,7 +695,7 @@
 
         .tab-content.active {
             display: block;
-            animation: fadeIn 0.5s ease-out;
+            /* animation supprimée */
         }
 
         /* Modale */
@@ -711,7 +711,7 @@
             z-index: 100;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.3s ease-out;
+            /* animation supprimée */
         }
 
         .modal.active {
@@ -727,7 +727,7 @@
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
-            animation: fadeIn 0.3s ease-out;
+            /* animation supprimée */
         }
 
         /* Remplacement en ligne `background: white` utilisations inserer via JS/modele */
@@ -936,15 +936,15 @@
         <!-- Tableau de bord -->
         <div id="dashboard" class="tab-content active">
             <div class="stats-grid" id="statsGrid">
-                <div class="stat-box" onclick="showDetailsList('active')">
+                <div class="stat-box">
                     <div class="stat-label">Rendez-vous Actifs</div>
                     <div class="stat-value" id="activeCount">0</div>
                 </div>
-                <div class="stat-box" onclick="showDetailsList('created')">
+                <div class="stat-box">
                     <div class="stat-label">Total Créés</div>
                     <div class="stat-value" id="totalCount">0</div>
                 </div>
-                <div class="stat-box" onclick="showDetailsList('expiring')">
+                <div class="stat-box">
                     <div class="stat-label">Expirations Proches</div>
                     <div class="stat-value" id="expiringCount">0</div>
                 </div>
@@ -1562,6 +1562,44 @@
     </div>
 
     <script>
+        // Son spécifique pour chaque onglet
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.addEventListener('click', function(e) {
+                const tabBtn = e.target.classList.contains('nav-tab') ? e.target : e.target.closest('.nav-tab');
+                if (tabBtn) {
+                    if (tabBtn.textContent.includes('Tableau de bord')) playSound('dashboard');
+                    else if (tabBtn.textContent.includes('Ajouter un rendez-vous')) playSound('create');
+                    else if (tabBtn.textContent.includes('Cérémonie')) playSound('ceremonie');
+                    else if (tabBtn.textContent.includes('Vérifier')) playSound('verify');
+                    else if (tabBtn.textContent.includes('Historique')) playSound('history');
+                    else playSound('section');
+                } else if (e.target.classList.contains('btn') || e.target.closest('.btn')) {
+                    playSound('click');
+                }
+            }, true);
+        });
+
+        function playSound(type) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            // Palette de sons par onglet
+            if(type === 'dashboard') { osc.frequency.value = 660; osc.type = 'triangle'; gain.gain.setValueAtTime(0.14, ctx.currentTime); }
+            else if(type === 'create') { osc.frequency.value = 880; osc.type = 'square'; gain.gain.setValueAtTime(0.13, ctx.currentTime); }
+            else if(type === 'ceremonie') { osc.frequency.value = 520; osc.type = 'sine'; gain.gain.setValueAtTime(0.15, ctx.currentTime); }
+            else if(type === 'verify') { osc.frequency.value = 740; osc.type = 'sawtooth'; gain.gain.setValueAtTime(0.13, ctx.currentTime); }
+            else if(type === 'history') { osc.frequency.value = 600; osc.type = 'triangle'; gain.gain.setValueAtTime(0.12, ctx.currentTime); }
+            else if(type === 'success') osc.frequency.value = 800;
+            else if(type === 'denied') osc.frequency.value = 400;
+            else if(type === 'alarm') osc.frequency.value = 600;
+            else if(type === 'section') { osc.frequency.value = 900; osc.type = 'sawtooth'; gain.gain.setValueAtTime(0.13, ctx.currentTime); }
+            else { osc.frequency.value = 520; gain.gain.setValueAtTime(0.08, ctx.currentTime); }
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.12);
+        }
         // Stockage de données 
         let visitors = JSON.parse(localStorage.getItem('visitors')) || [];
         // Correction : convertir startTime et endTime en objets Date
@@ -1685,8 +1723,12 @@
                 localStorage.setItem('monthlyUnlocked', getMonthKey());
                 monthlyLocked = false;
 
+                // Démarrer le décompte de 30 jours
+                const unlockDate = new Date();
+                localStorage.setItem('monthlyUnlockDate', unlockDate.toISOString());
+                updateMonthlyCountdown();
+
                 // IMPORTANT: do NOT unlock per-tab access when monthly unlock is entered.
-                // Ensure create/ceremony tabs remain locked and clear any stored per-tab unlock flags.
                 localStorage.removeItem('createTabUnlocked');
                 localStorage.removeItem('ceremonyTabUnlocked');
                 createTabUnlocked = false;
@@ -1733,6 +1775,28 @@
             if (monthlyLocked) {
                 const m = document.getElementById('monthlyLockModal');
                 if (m) m.style.display = 'flex';
+                updateMonthlyCountdown();
+                // Affichage du décompte mensuel
+                function updateMonthlyCountdown() {
+                    const info = document.getElementById('monthlyLockInfo');
+                    const unlockDateStr = localStorage.getItem('monthlyUnlockDate');
+                    if (!info) return;
+                    if (unlockDateStr) {
+                        const unlockDate = new Date(unlockDateStr);
+                        const now = new Date();
+                        const msLeft = 30 * 24 * 60 * 60 * 1000 - (now - unlockDate);
+                        if (msLeft > 0) {
+                            const days = Math.floor(msLeft / (24 * 60 * 60 * 1000));
+                            const hours = Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                            info.textContent = `Le site est déverrouillé. Il restera accessible pendant ${days} jours et ${hours} heures.`;
+                        } else {
+                            info.textContent = 'Le site est verrouillé pour le début du mois. Entrez le mot de passe pour débloquer.';
+                            localStorage.removeItem('monthlyUnlockDate');
+                        }
+                    } else {
+                        info.textContent = 'Le site est verrouillé pour le début du mois. Entrez le mot de passe pour débloquer.';
+                    }
+                }
                 return;
             }
 
@@ -2575,42 +2639,13 @@
                                     <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; font-weight: 600;">Téléphone</div>
                                     <div style="font-size: 13px; color: #065f46; margin-top: 3px;">📱 ${visitor.phone || 'N/A'}</div>
                                 </div>
-                                <div style="border-bottom: 2px solid #f0fdf4; padding-bottom: 12px;">
-                                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; font-weight: 600;">Temps Restant</div>
-                                    <div style="font-size: 16px; font-weight: 700; color: #10b981; margin-top: 3px;">⏱️ ${timeRemaining}</div>
-                                </div>
                                 <div>
-                                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; font-weight: 600;">Validité</div>
+                                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; font-weight: 600;">Période</div>
                                     <div style="font-size: 13px; color: #065f46; margin-top: 3px;">
                                         De: ${visitor.startTime.toLocaleString('fr-FR')}<br>
                                         À: ${visitor.endTime.toLocaleString('fr-FR')}
                                     </div>
                                 </div>
-                                ${visitor.mariage ? `
-                                <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #d1fae5;">
-                                    <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; font-weight: 600; margin-bottom: 12px;">📍 Détails du Mariage</div>
-                                    <div style="background: #f0fdf4; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-                                        <div style="font-size: 13px; color: #065f46;"><strong>⛪ Église:</strong> ${visitor.mariage.eglise || 'N/A'}</div>
-                                        ${visitor.mariage.egliseAdresse ? `<div style="font-size: 12px; color: #099268; margin-top: 4px;">📮 ${visitor.mariage.egliseAdresse}</div>` : ''}
-                                    </div>
-                                    <div style="background: #f0fdf4; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-                                        <div style="font-size: 13px; color: #065f46;"><strong>🏘️ Commune:</strong> ${visitor.mariage.commune || 'N/A'}</div>
-                                    </div>
-                                    <div style="background: #f0fdf4; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-                                        <div style="font-size: 13px; color: #065f46;"><strong>📸 Photographe:</strong> ${visitor.mariage.photographe || 'N/A'}</div>
-                                    </div>
-                                    ${visitor.mariage.evenements && visitor.mariage.evenements.length > 0 ? `
-                                    <div style="background: #f0fdf4; border-radius: 6px; padding: 12px;">
-                                        <div style="font-size: 13px; color: #065f46; font-weight: 600; margin-bottom: 8px;">⏰ Chronologie des Événements:</div>
-                                        ${visitor.mariage.evenements.map(e => `
-                                            <div style="font-size: 12px; color: #065f46; margin: 6px 0; padding-left: 10px;">
-                                                <strong>${e.time || '--:--'}</strong> - ${e.description || 'Événement'}
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    ` : ''}
-                                </div>
-                                ` : ''}
                             </div>
                         </div>
                         <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px; font-size: 13px; color: #15803d; font-weight: 600;">
@@ -3112,7 +3147,9 @@
                 }
             });
 
-            document.getElementById('activeCount').textContent = activeCount;
+            // Synchronise 'Rendez-vous Actifs' avec le nombre de rendez-vous créés (hors cérémonies)
+            const createdCount = visitors.filter(v => v.category !== 'ceremonie').length;
+            document.getElementById('activeCount').textContent = createdCount;
             document.getElementById('totalCount').textContent = visitors.length;
             document.getElementById('expiringCount').textContent = expiringCount;
             document.getElementById('ceremonyCount').textContent = ceremonyCount;
@@ -3378,7 +3415,7 @@ Sexe: ${visitor.sexe || 'N/A'}
                 return logDate >= todayStart && logDate < todayEnd;
             });
 
-            document.getElementById('reportContent').innerHTML = '<div class="report-section"><div class="report-title">📊 Bilan Journalier</div><div class="report-stats"><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.length + '</div><div class="report-stat-label">Invitations Totales</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => new Date() >= v.startTime && new Date() <= v.endTime).length + '</div><div class="report-stat-label">Actives</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => new Date() > v.endTime).length + '</div><div class="report-stat-label">Expirées</div></div><div class="report-stat"><div class="report-stat-value">' + dailyAccessLog.length + '</div><div class="report-stat-label">Scans Total</div></div></div></div>';
+            document.getElementById('reportContent').innerHTML = '<div class="report-section"><div class="report-title">📊 Bilan Journalier</div><div class="report-stats"><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.length + '</div><div class="report-stat-label">Invitations Totales</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => { const startTime = (v.startTime instanceof Date) ? v.startTime : new Date(v.startTime); const endTime = (v.endTime instanceof Date) ? v.endTime : new Date(v.endTime); return new Date() >= startTime && new Date() <= endTime; }).length + '</div><div class="report-stat-label">Actives</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => { const endTime = (v.endTime instanceof Date) ? v.endTime : new Date(v.endTime); return new Date() > endTime; }).length + '</div><div class="report-stat-label">Expirées</div></div><div class="report-stat"><div class="report-stat-value">' + dailyAccessLog.length + '</div><div class="report-stat-label">Scans Total</div></div></div></div>';
             // Correction : conversion des dates
             document.getElementById('reportContent').innerHTML = '<div class="report-section"><div class="report-title">📊 Bilan Journalier</div><div class="report-stats"><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.length + '</div><div class="report-stat-label">Invitations Totales</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => { const startTime = (v.startTime instanceof Date) ? v.startTime : new Date(v.startTime); const endTime = (v.endTime instanceof Date) ? v.endTime : new Date(v.endTime); return new Date() >= startTime && new Date() <= endTime; }).length + '</div><div class="report-stat-label">Actives</div></div><div class="report-stat"><div class="report-stat-value">' + dailyVisitors.filter(v => { const endTime = (v.endTime instanceof Date) ? v.endTime : new Date(v.endTime); return new Date() > endTime; }).length + '</div><div class="report-stat-label">Expirées</div></div><div class="report-stat"><div class="report-stat-value">' + dailyAccessLog.length + '</div><div class="report-stat-label">Scans Total</div></div></div></div>';
             document.getElementById('reportModal').classList.add('active');
@@ -3456,7 +3493,7 @@ Sexe: ${visitor.sexe || 'N/A'}
                 let htmlContent = '';
                 filteredVisitors.forEach(v => {
                     const endTimeStr = new Date(v.endTime).toLocaleString('fr-FR');
-                    const photoHtml = v.photo ? `<img src="${v.photo}" alt="${v.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">` : '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>';
+                    const photoHtml = v.photo ? `<img src="${v.photo}" alt="${v.name}">` : '<div style="width: 80px; height: 80px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px;">👤</div>';
                     let infoGrid = '';
                     if (v.sexe) infoGrid += `<div><strong>Sexe:</strong> ${v.sexe}</div>`;
                     if (v.phone) infoGrid += `<div><strong>Téléphone:</strong> ${v.phone}</div>`;
@@ -3464,6 +3501,8 @@ Sexe: ${visitor.sexe || 'N/A'}
                     if (v.type) infoGrid += `<div><strong>Type:</strong> ${v.type}</div>`;
                     if (v.location) infoGrid += `<div><strong>Lieu:</strong> ${v.location}</div>`;
                     if (v.service) infoGrid += `<div><strong>Service:</strong> ${v.service}</div>`;
+                    if (v.cerPlace) infoGrid += `<div><strong>Place Attitrée:</strong> <span style="color: #e11d48; font-weight: 600;">${v.cerPlace}</span></div>`;
+                    if (v.capacity) infoGrid += `<div><strong>Nombre de Personnes:</strong> <span style="color: #0ea5e9; font-weight: 600;">${v.capacity}</span></div>`;
                     if (v.quickCode) infoGrid += `<div><strong>Code Rapide:</strong> <span style="color: #0ea5e9; font-weight: 600;">${v.quickCode}</span></div>`;
                     if (v.endTime) infoGrid += `<div><strong>Fin Valid:</strong> ${new Date(v.endTime).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</div>`;
                     htmlContent += `
@@ -3480,12 +3519,14 @@ Sexe: ${visitor.sexe || 'N/A'}
                 document.getElementById('detailsListContent').innerHTML = htmlContent;
             }
 
-            document.getElementById('detailsListModal').classList.add('active');
+            // Affichage simple sans animation
+            document.getElementById('detailsListModal').style.display = 'block';
         }
 
         // Fermer le modal de détails
         function closeDetailsListModal() {
-            document.getElementById('detailsListModal').classList.remove('active');
+            // Fermeture simple sans animation
+            document.getElementById('detailsListModal').style.display = 'none';
         }
 
         // Imprimer la fiche du visiteur
@@ -3648,9 +3689,7 @@ Sexe: ${visitor.sexe || 'N/A'}
                             <div class="print-title">${visitor.name}</div>
                         </div>
                     </div>
-                    <div class="print-info-grid">
-                        ${infoGrid.replace(/info-item/g,'print-info-item').replace(/info-label/g,'print-info-label').replace(/info-value/g,'print-info-value')}
-                    </div>
+                    <div class="print-info-grid">${infoGrid}</div>
                     <div class="print-footer">Fiche générée le ${new Date().toLocaleString('fr-FR')}</div>
                 </div>
             </body></html>
@@ -3669,18 +3708,14 @@ Sexe: ${visitor.sexe || 'N/A'}
             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(ceremony.id)}`;
             let infoGrid = '';
             const fields = [
-                { key: 'sexe', label: 'Sexe' },
+                { key: 'sexe', label: 'Nom' },
                 { key: 'phone', label: 'Téléphone' },
                 { key: 'email', label: 'Email' },
                 { key: 'type', label: 'Type' },
                 { key: 'location', label: 'Lieu' },
-                { key: 'service', label: 'Service' },
                 { key: 'cerPlace', label: 'Place Attitrée' },
-                { key: 'quickCode', label: 'Code Rapide' },
-                { key: 'requestNumber', label: 'Numéro de Demande' },
                 { key: 'scans', label: 'Total Scans', custom: v => v.scans && v.scans.length ? v.scans.length : null },
-                { key: 'startTime', label: 'Début', custom: v => v.startTime ? new Date(v.startTime).toLocaleString('fr-FR') : null },
-                { key: 'endTime', label: 'Fin', custom: v => v.endTime ? new Date(v.endTime).toLocaleString('fr-FR') : null }
+
             ];
             fields.forEach(f => {
                 let value = f.custom ? f.custom(ceremony) : ceremony[f.key];
