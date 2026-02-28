@@ -1504,39 +1504,6 @@
         </div>
     </div>
 
-    <!-- Password protection modal for Create tab -->
-    <div id="createPasswordModal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">🔐 Accès - Ajouter un Rendez-vous</h2>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-                <input id="createPasswordInput" type="password" placeholder="Mot de passe" style="padding:10px;border:1px solid var(--border);border-radius:8px;" />
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button class="btn btn-secondary" onclick="closeCreatePasswordModal()">Annuler</button>
-                    <button class="btn btn-primary" onclick="verifyCreatePassword()">Accéder</button>
-                </div>
-                <div id="createPasswordMessage" style="color:var(--danger);display:none;margin-top:6px;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Password protection modal for Ceremony tab -->
-    <div id="ceremonyPasswordModal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">🔐 Accès - Ajouter une Cérémonie</h2>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-                <input id="ceremonyPasswordInput" type="password" placeholder="Mot de passe" style="padding:10px;border:1px solid var(--border);border-radius:8px;" />
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button class="btn btn-secondary" onclick="closeCeremonyPasswordModal()">Annuler</button>
-                    <button class="btn btn-primary" onclick="verifyCeremonyPassword()">Accéder</button>
-                </div>
-                <div id="ceremonyPasswordMessage" style="color:var(--danger);display:none;margin-top:6px;"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- Monthly site lock modal -->
     <div id="monthlyLockModal" class="modal" style="display:none;">
@@ -1545,7 +1512,7 @@
                 <h2 class="modal-title">🔒 Verrouillage Mensuel</h2>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px;">
-                <p id="monthlyLockInfo">Le site est verrouillé pour le début du mois. Entrez le mot de passe pour débloquer.</p>
+                <p id="monthlyLockInfo">Seules les sections « Créer un rendez-vous » et « Cérémonie » sont verrouillées ce mois-ci. Entrez le mot de passe pour y accéder.</p>
                 <input id="monthlyLockInput" type="password" placeholder=" Veillez entrez le mot de passe " style="padding:10px;border:1px solid var(--border);border-radius:8px;" />
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
                     <button class="btn btn-secondary" onclick="closeMonthlyLockModal()">Annuler</button>
@@ -1763,10 +1730,10 @@
         }
 
         // Onglet de changement
-        // Mots de passe mis à jour
-        const CREATE_PASSWORD = 'Benito993778953'; // Case rendez-vous
-        const CEREMONY_PASSWORD = 'B3n1t0995694187'; // Case cérémonie
-        const MONTHLY_PASSWORD = 'Benit Uwase2003'; // Verrouillage mensuel
+        // Les mots de passe pour les sections de création ont été supprimés
+        const CREATE_PASSWORD = ''; // aucun mot de passe
+        const CEREMONY_PASSWORD = ''; // aucun mot de passe
+        const MONTHLY_PASSWORD = ''; // Verrouillage mensuel
 
         // Système de détection d'appareil
         function getDeviceFingerprint() {
@@ -1783,7 +1750,7 @@
                 localStorage.removeItem('ceremonyTabUnlocked');
                 localStorage.removeItem(getMonthlyUnlockKey());
                 monthlyLocked = true;
-                document.addEventListener('DOMContentLoaded', showMonthlyModal);
+                // modal will display only when user tries to access a locked section
                 console.log('Nouvel appareil détecté - mot de passe mensuel exigé');
                 return false;
             }
@@ -1818,11 +1785,6 @@
                 localStorage.setItem(getMonthlyUnlockKey(), unlockDate.toISOString());
                 monthlyLocked = false;
                 updateMonthlyCountdown();
-                // IMPORTANT: ne pas déverrouiller les sections
-                localStorage.removeItem('createTabUnlocked');
-                localStorage.removeItem('ceremonyTabUnlocked');
-                createTabUnlocked = false;
-                ceremonyTabUnlocked = false;
                 document.getElementById('monthlyLockModal').style.display = 'none';
                 document.getElementById('monthlyLockInput').value = '';
                 if (msg) msg.style.display = 'none';
@@ -1851,21 +1813,22 @@
                 monthlyLocked = true;
                 localStorage.removeItem('createTabUnlocked');
                 localStorage.removeItem('ceremonyTabUnlocked');
-                document.addEventListener('DOMContentLoaded', showMonthlyModal);
+                // modal will be shown later only on restricted tab access
             } else if (monthlyLocked) {
                 localStorage.removeItem('createTabUnlocked');
                 localStorage.removeItem('ceremonyTabUnlocked');
-                document.addEventListener('DOMContentLoaded', showMonthlyModal);
+                // same note: don't pop-up immediately
             }
         }
         enforceDeviceLock();
 
-        let createTabUnlocked = localStorage.getItem('createTabUnlocked') === 'true';
-        let ceremonyTabUnlocked = localStorage.getItem('ceremonyTabUnlocked') === 'true';
+        // La protection par mot de passe a été supprimée, toujours déverrouillé
+        let createTabUnlocked = true;
+        let ceremonyTabUnlocked = true;
 
         function switchTab(tabName, buttonElement) {
-            // Monthly site lock check
-            if (monthlyLocked) {
+            // Monthly lock applies only to the creation tabs now
+            if (monthlyLocked && (tabName === 'create' || tabName === 'ceremonie')) {
                 const m = document.getElementById('monthlyLockModal');
                 if (m) m.style.display = 'flex';
                 updateMonthlyCountdown();
@@ -1881,27 +1844,19 @@
                         if (msLeft > 0) {
                             const days = Math.floor(msLeft / (24 * 60 * 60 * 1000));
                             const hours = Math.floor((msLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-                            info.textContent = `Le site est déverrouillé. Il restera accessible pendant ${days} jours et ${hours} heures.`;
+                            info.textContent = `Les sections de création sont déverrouillées. Elles resteront accessibles pendant ${days} jours et ${hours} heures.`;
                         } else {
-                            info.textContent = 'Le site est verrouillé pour le début du mois. Entrez le mot de passe pour débloquer.';
+                            info.textContent = 'Les sections de création sont verrouillées pour le début du mois. Entrez le mot de passe pour débloquer.';
                             localStorage.removeItem('monthlyUnlockDate');
                         }
                     } else {
-                        info.textContent = 'Le site est verrouillé pour le début du mois. Entrez le mot de passe pour débloquer.';
+                        info.textContent = 'Les sections de création sont verrouillées pour le début du mois. Entrez le mot de passe pour débloquer.';
                     }
                 }
                 return;
             }
 
-            // Check password protection for create and ceremonie tabs
-            if (tabName === 'create' && !createTabUnlocked) {
-                document.getElementById('createPasswordModal').style.display = 'flex';
-                return;
-            }
-            if (tabName === 'ceremonie' && !ceremonyTabUnlocked) {
-                document.getElementById('ceremonyPasswordModal').style.display = 'flex';
-                return;
-            }
+            // plus de protection par mot de passe pour les onglets de création
 
             // Supp class active de tous les onglets et boutons
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -1923,58 +1878,6 @@
             if (tabName === 'history') updateAccessLog();
         }
 
-        // Password modal functions
-        function verifyCreatePassword() {
-            const pwd = document.getElementById('createPasswordInput').value;
-            const msg = document.getElementById('createPasswordMessage');
-            if (pwd === CREATE_PASSWORD) {
-                createTabUnlocked = true;
-                localStorage.setItem('createTabUnlocked', 'true');
-                document.getElementById('createPasswordModal').style.display = 'none';
-                document.getElementById('createPasswordInput').value = '';
-                // Switch to create tab
-                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-                document.getElementById('create').classList.add('active');
-                const btn = document.querySelector('[onclick*="switchTab(\'create\'"]');
-                if (btn) btn.classList.add('active');
-            } else {
-                msg.style.display = 'block';
-                msg.textContent = 'Mot de passe incorrect';
-            }
-        }
-
-        function closeCreatePasswordModal() {
-            document.getElementById('createPasswordModal').style.display = 'none';
-            document.getElementById('createPasswordInput').value = '';
-            document.getElementById('createPasswordMessage').style.display = 'none';
-        }
-
-        function verifyCeremonyPassword() {
-            const pwd = document.getElementById('ceremonyPasswordInput').value;
-            const msg = document.getElementById('ceremonyPasswordMessage');
-            if (pwd === CEREMONY_PASSWORD) {
-                ceremonyTabUnlocked = true;
-                localStorage.setItem('ceremonyTabUnlocked', 'true');
-                document.getElementById('ceremonyPasswordModal').style.display = 'none';
-                document.getElementById('ceremonyPasswordInput').value = '';
-                // Switch to ceremonie tab
-                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-                document.getElementById('ceremonie').classList.add('active');
-                const btn = document.querySelector('[onclick*="switchTab(\'ceremonie\'"]');
-                if (btn) btn.classList.add('active');
-            } else {
-                msg.style.display = 'block';
-                msg.textContent = 'Mot de passe incorrect';
-            }
-        }
-
-        function closeCeremonyPasswordModal() {
-            document.getElementById('ceremonyPasswordModal').style.display = 'none';
-            document.getElementById('ceremonyPasswordInput').value = '';
-            document.getElementById('ceremonyPasswordMessage').style.display = 'none';
-        }
 
         // Fonction de la camera pour la capture de photo du visiteur
         function startCamera() {
