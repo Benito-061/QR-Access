@@ -1,0 +1,200 @@
+/* QR Access — notifications succès / erreur */
+.qr-notify-stack {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: min(420px, calc(100vw - 32px));
+    pointer-events: none;
+}
+
+.qr-notify {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.08);
+    animation: qrNotifyIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.qr-notify::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background: currentColor;
+    opacity: 0.35;
+    animation: qrNotifyProgress 4.5s linear forwards;
+}
+
+.qr-notify--leaving {
+    animation: qrNotifyOut 0.35s ease forwards;
+}
+
+.qr-notify__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+}
+
+.qr-notify__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.qr-notify__title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    color: #0f172a;
+}
+
+.qr-notify__message {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #64748b;
+}
+
+.qr-notify__close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.qr-notify__close:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.qr-notify--success {
+    border-color: #bbf7d0;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 55%);
+    color: #16a34a;
+}
+
+.qr-notify--success .qr-notify__icon {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.qr-notify--error {
+    border-color: #fecaca;
+    background: linear-gradient(135deg, #fef2f2 0%, #ffffff 55%);
+    color: #dc2626;
+}
+
+.qr-notify--error .qr-notify__icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.qr-notify--info {
+    border-color: #bfdbfe;
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%);
+    color: #2563eb;
+}
+
+.qr-notify--info .qr-notify__icon {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+/* Inline formulaire (auth / profil) */
+.form-feedback {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: qrNotifyIn 0.4s ease;
+}
+
+.form-feedback i {
+    font-size: 18px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.form-feedback--success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+}
+
+.form-feedback--error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+body.dark-theme .qr-notify {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-theme .qr-notify__title {
+    color: #f8fafc;
+}
+
+body.dark-theme .qr-notify__message {
+    color: #94a3b8;
+}
+
+@keyframes qrNotifyIn {
+    from {
+        opacity: 0;
+        transform: translateX(24px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes qrNotifyOut {
+    to {
+        opacity: 0;
+        transform: translateX(24px) scale(0.96);
+    }
+}
+
+@keyframes qrNotifyProgress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+@media (max-width: 640px) {
+    .qr-notify-stack {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        max-width: none;
+    }
+}

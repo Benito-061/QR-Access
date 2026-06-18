@@ -1,0 +1,197 @@
+.profile-container {
+    padding: 32px 24px 48px;
+    max-width: 900px;
+}
+
+.profile-page-header {
+    margin-bottom: 28px;
+}
+
+.profile-page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+}
+
+.profile-page-header p {
+    color: var(--text-muted);
+    font-size: 15px;
+}
+
+.profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+}
+
+.profile-card-header {
+    margin-bottom: 24px;
+}
+
+.profile-card-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-card-header h2 i {
+    color: var(--primary);
+    font-size: 16px;
+}
+
+.profile-card-header p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.profile-card--danger {
+    border-color: #fecaca;
+    background: #fffbfb;
+}
+
+body.dark-theme .profile-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-theme .profile-card--danger {
+    background: #1a1212;
+    border-color: #7f1d1d;
+}
+
+.profile-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.profile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+
+.profile-btn--primary {
+    background: var(--primary);
+    color: #fff;
+}
+
+.profile-btn--primary:hover {
+    background: #1d4ed8;
+}
+
+.profile-btn--ghost {
+    background: var(--light);
+    color: var(--dark);
+    border: 1px solid var(--border);
+}
+
+.profile-btn--ghost:hover {
+    background: #e2e8f0;
+}
+
+.profile-btn--danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.profile-btn--danger:hover {
+    background: #b91c1c;
+}
+
+.profile-success {
+    font-size: 14px;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.profile-verify-note {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    line-height: 1.5;
+}
+
+.profile-verify-note button {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    text-decoration: underline;
+}
+
+.profile-delete-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.profile-delete-modal .modal-content {
+    max-width: 480px;
+}
+
+/* Réutilisation des champs auth sur la page profil */
+.profile-card .auth-field label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.profile-card .auth-field input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: inherit;
+}
+
+.profile-card .auth-field input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.profile-card .auth-field-error {
+    font-size: 13px;
+    color: #dc2626;
+    margin-top: 6px;
+}
+
+.profile-card .auth-field {
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .profile-container {
+        padding: 20px 16px 40px;
+    }
+
+    .profile-card {
+        padding: 20px;
+    }
+}
