@@ -3,18 +3,37 @@
 use App\Http\Controllers\CeremonyManagementPageController;
 use App\Http\Controllers\CeremonyPageController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GuestGiftController;
+use App\Http\Controllers\GuestInviteeAuthController;
 use App\Http\Controllers\HistoryPageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\VerifyPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
+    if (session()->has('invitee_guest_id')) {
+        return redirect()->route('invitee.gift');
+    }
+
     return auth()->check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware('invitee.guest')->group(function () {
+    Route::get('/invite/connexion', [GuestInviteeAuthController::class, 'create'])
+        ->name('invitee.login');
+    Route::post('/invite/connexion', [GuestInviteeAuthController::class, 'store'])
+        ->name('invitee.login.store');
+});
+
+Route::middleware('invitee')->prefix('invite')->name('invitee.')->group(function () {
+    Route::get('/cadeau', [GuestGiftController::class, 'index'])->name('gift');
+    Route::post('/cadeau', [GuestGiftController::class, 'store'])->name('gift.store');
+    Route::post('/deconnexion', [GuestInviteeAuthController::class, 'destroy'])->name('logout');
+});
+
+Route::middleware(['auth', 'verified', 'invitee.block_admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/ceremonie', [CeremonyPageController::class, 'index'])->name('ceremonie');
     Route::get('/verify', [VerifyPageController::class, 'index'])->name('verify');

@@ -3270,3 +3270,312 @@
 .sidebar .nav-tab--logout {
     width: 100%;
 }
+
+/* ── Navigation mobile (barre inférieure) ── */
+.mobile-bottom-nav {
+    display: none;
+}
+
+@media (max-width: 992px) {
+    .mobile-bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 220;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08);
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+        gap: 2px;
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 56px;
+        padding: 6px 2px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.1;
+        text-align: center;
+        border-radius: 10px;
+        transition: color 0.2s ease, background 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-nav-item i {
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .mobile-nav-item span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-nav-item:hover,
+    .mobile-nav-item:focus-visible {
+        color: var(--primary);
+        background: rgba(37, 99, 235, 0.06);
+        outline: none;
+    }
+
+    .mobile-nav-item.active {
+        color: var(--primary);
+        background: rgba(37, 99, 235, 0.1);
+    }
+
+    .mobile-nav-item.active i {
+        transform: scale(1.05);
+    }
+
+    .mobile-nav-item--menu {
+        cursor: pointer;
+    }
+
+    .main-wrapper {
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .mobile-topbar {
+        justify-content: center;
+    }
+
+    .mobile-title {
+        font-size: 16px;
+    }
+
+    #scrollToTopBtn {
+        bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+        right: 16px;
+        width: 44px;
+        height: 44px;
+        line-height: 44px;
+        font-size: 20px;
+    }
+
+    .sidebar-nav .mobile-bottom-item,
+    .sidebar-nav .nav-section-label:first-of-type {
+        display: none !important;
+    }
+
+    .sidebar.open {
+        box-shadow: 8px 0 32px rgba(0, 0, 0, 0.25);
+    }
+
+    body.sidebar-open {
+        overflow: hidden;
+    }
+
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .page-title {
+        font-size: 22px;
+    }
+
+    .btn-report {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    #dashboard .stat-box {
+        padding: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    #dashboard .stat-value {
+        font-size: 28px;
+    }
+
+    .card {
+        padding: 18px;
+        border-radius: var(--radius);
+    }
+
+    .card:hover {
+        transform: none;
+    }
+
+    .stat-box:hover {
+        transform: none;
+    }
+
+    .ceremony-form-panel {
+        padding: 16px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .guest-quick-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ceremony-management-form {
+        padding: 16px !important;
+    }
+
+    .ceremony-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .mgmt-form-footer {
+        flex-direction: column;
+    }
+
+    .mgmt-form-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-scroll-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -4px;
+        padding-bottom: 4px;
+    }
+
+    .guests-table {
+        min-width: 560px;
+    }
+
+    .visitors-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .visitor-item {
+        padding: 14px;
+    }
+
+    .visitor-meta {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 4px !important;
+    }
+
+    .modal-content {
+        width: calc(100% - 24px) !important;
+        max-width: none !important;
+        max-height: calc(100vh - 100px - env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        margin: 12px;
+    }
+
+    .scanner-panel video {
+        max-height: 240px;
+    }
+
+    .ceremony-tabs-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+
+    #ceremonyTabsContainer {
+        flex-wrap: nowrap;
+        min-width: min-content;
+    }
+
+    .info-tiles-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .guests-section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .guests-section-header > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .guests-section-header .btn {
+        flex: 1;
+        min-width: 140px;
+        justify-content: center;
+    }
+
+    .history-toolbar {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .history-toolbar input,
+    .history-toolbar select,
+    .history-toolbar button {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .mobile-nav-item {
+        font-size: 9px;
+        min-height: 52px;
+        gap: 3px;
+    }
+
+    .mobile-nav-item i {
+        font-size: 17px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .info-tiles-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .container {
+        padding: 16px 12px;
+    }
+
+    .page-title {
+        font-size: 20px;
+    }
+}
+
+body.dark-theme .mobile-bottom-nav {
+    background: #1e293b;
+    border-top-color: #334155;
+}
+
+body.dark-theme .mobile-nav-item {
+    color: #94a3b8;
+}
+
+body.dark-theme .mobile-nav-item.active,
+body.dark-theme .mobile-nav-item:hover {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.15);
+}
+

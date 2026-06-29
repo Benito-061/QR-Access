@@ -8,6 +8,7 @@
         var shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !sidebar.classList.contains('open');
         sidebar.classList.toggle('open', shouldOpen);
         overlay.classList.toggle('active', shouldOpen);
+        document.body.classList.toggle('sidebar-open', shouldOpen);
     }
 
     function updateThemeButton() {
@@ -112,6 +113,14 @@
                 if (e.target === modal) {
                     modal.style.display = 'none';
                     modal.classList.remove('active');
+                }
+            });
+        });
+
+        document.querySelectorAll('.sidebar-nav a.nav-tab').forEach(function (link) {
+            link.addEventListener('click', function () {
+                if (window.innerWidth <= 992) {
+                    toggleSidebar(false);
                 }
             });
         });

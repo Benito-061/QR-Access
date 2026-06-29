@@ -64,4 +64,9 @@
             <a class="auth-link" href="{{ route('register') }}">Créer un compte</a>
         </p>
     @endif
+
+    <p class="auth-footer" style="margin-top: 8px;">
+        Vous êtes invité à une cérémonie ?
+        <a class="auth-link" href="{{ route('invitee.login') }}">Connexion invité</a>
+    </p>
 </x-auth-layout>

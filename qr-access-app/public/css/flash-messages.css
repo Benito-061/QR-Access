@@ -196,5 +196,12 @@ body.dark-theme .qr-notify__message {
         right: 12px;
         left: 12px;
         max-width: none;
+        z-index: 10050;
+    }
+}
+
+@media (max-width: 992px) {
+    .qr-notify-stack {
+        z-index: 10050;
     }
 }

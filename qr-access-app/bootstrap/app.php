@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'invitee' => \App\Http\Middleware\EnsureInviteeGuest::class,
+            'invitee.guest' => \App\Http\Middleware\RedirectIfInviteeGuest::class,
+            'invitee.block_admin' => \App\Http\Middleware\RedirectInviteeFromAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

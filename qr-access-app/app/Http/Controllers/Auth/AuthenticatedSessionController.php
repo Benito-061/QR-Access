@@ -26,6 +26,12 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $request->session()->forget([
+            'invitee_guest_id',
+            'invitee_ceremony_id',
+            'invitee_guest_name',
+        ]);
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false))

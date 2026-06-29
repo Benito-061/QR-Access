@@ -3,10 +3,7 @@
         <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
         <main class="main-wrapper">
             <div class="mobile-topbar">
-                <button type="button" class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Menu">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <span class="mobile-title">QR Access Manager</span>
+                <span class="mobile-title">{{ $pageTitle ?? 'QR Access Manager' }}</span>
             </div>
             <div class="container">
         @php($active = $activeTab ?? 'dashboard')
@@ -383,7 +380,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div id="guestsTableContainer"></div>
+                        <div id="guestsTableContainer" class="table-scroll-wrap"></div>
                     </div>
 
                 </div>
@@ -644,6 +641,7 @@
         </div>
             </div>
         </main>
+        @include('partials.mobile-bottom-nav', ['activeTab' => $activeTab ?? 'dashboard'])
     </div>
 
 

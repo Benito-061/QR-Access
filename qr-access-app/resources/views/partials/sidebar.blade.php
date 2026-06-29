@@ -10,19 +10,19 @@
     </div>
     <nav class="sidebar-nav">
         <span class="nav-section-label">Menu principal</span>
-        <a href="{{ route('dashboard') }}" class="nav-tab {{ ($activeTab ?? '') === 'dashboard' ? 'active' : '' }}" data-tab="dashboard">
+        <a href="{{ route('dashboard') }}" class="nav-tab mobile-bottom-item {{ ($activeTab ?? '') === 'dashboard' ? 'active' : '' }}" data-tab="dashboard">
             <i class="fa-solid fa-chart-line"></i><span>Tableau de bord</span>
         </a>
-        <a href="{{ route('ceremonie') }}" class="nav-tab {{ ($activeTab ?? '') === 'ceremonie' ? 'active' : '' }}" data-tab="ceremonie">
+        <a href="{{ route('ceremonie') }}" class="nav-tab mobile-bottom-item {{ ($activeTab ?? '') === 'ceremonie' ? 'active' : '' }}" data-tab="ceremonie">
             <i class="fa-solid fa-calendar-plus"></i><span>Ajouter une cérémonie</span>
         </a>
-        <a href="{{ route('verify') }}" class="nav-tab {{ ($activeTab ?? '') === 'verify' ? 'active' : '' }}" data-tab="verify">
+        <a href="{{ route('verify') }}" class="nav-tab mobile-bottom-item {{ ($activeTab ?? '') === 'verify' ? 'active' : '' }}" data-tab="verify">
             <i class="fa-solid fa-clipboard-check"></i><span>Vérifier</span>
         </a>
-        <a href="{{ route('history') }}" class="nav-tab {{ ($activeTab ?? '') === 'history' ? 'active' : '' }}" data-tab="history">
+        <a href="{{ route('history') }}" class="nav-tab mobile-bottom-item {{ ($activeTab ?? '') === 'history' ? 'active' : '' }}" data-tab="history">
             <i class="fa-solid fa-clock-rotate-left"></i><span>Historique</span>
         </a>
-        <a href="{{ route('gestion-ceremonies') }}" class="nav-tab {{ ($activeTab ?? '') === 'gestionceremonies' ? 'active' : '' }}" data-tab="gestionceremonies">
+        <a href="{{ route('gestion-ceremonies') }}" class="nav-tab mobile-bottom-item {{ ($activeTab ?? '') === 'gestionceremonies' ? 'active' : '' }}" data-tab="gestionceremonies">
             <i class="fa-solid fa-building-columns"></i><span>Gestion des cérémonies</span>
         </a>
         <span class="nav-section-label">Compte</span>
