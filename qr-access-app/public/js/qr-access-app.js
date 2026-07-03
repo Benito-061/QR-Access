@@ -1646,7 +1646,7 @@
                         }
                         document.getElementById('verifyScanner').style.display = 'block';
                         const scanBtn = document.getElementById('startScanBtn');
-                        if (scanBtn) scanBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                        if (scanBtn) scanBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Fermer la caméra';
                         if (status) { status.textContent = 'Caméra active — pointez vers le QR code…'; status.style.color = '#10b981'; }
                         verifyScanActive = true;
                         verifyLastScanAt = 0;
@@ -1668,7 +1668,8 @@
                 if (video) video.srcObject = null;
                 const scanner = document.getElementById('verifyScanner');
                 if (scanner) scanner.style.display = 'none';
-                if (document.getElementById('startScanBtn')) document.getElementById('startScanBtn').textContent = '📷';
+                const scanBtn = document.getElementById('startScanBtn');
+                if (scanBtn) scanBtn.innerHTML = '<i class="fa-solid fa-qrcode"></i> Ouvrir la caméra';
                 if (verifyScanAnimationId) cancelAnimationFrame(verifyScanAnimationId);
                 const status = document.getElementById('verifyCameraStatus');
                 if (status) { status.textContent = 'Caméra arrêtée'; status.style.color = '#6b7280'; }
@@ -1705,10 +1706,15 @@
                         }
                         verifyLastScanAt = now;
                         const scanned = code.data.trim();
+                        const input = document.getElementById('verifyCode');
+                        if (input) input.value = scanned;
                         stopVerifyCamera();
                         const status = document.getElementById('verifyCameraStatus');
                         if (status) { status.textContent = 'QR détecté — vérification…'; status.style.color = '#10b981'; }
-                        handleQrScanDetected(scanned);
+                        const runVerify = window.verifyCode || verifyCode;
+                        if (typeof runVerify === 'function') {
+                            setTimeout(() => runVerify(), 150);
+                        }
                         return;
                     }
                 } catch (e) {
@@ -1716,242 +1722,6 @@
                 }
 
                 verifyScanAnimationId = requestAnimationFrame(scanVerifyFrame);
-            }
-
-            // ——— Scanner QR global (FAB + modal) ———
-            let globalScanStream = null;
-            let globalScanActive = false;
-            let globalScanAnimId = null;
-            let globalLastScanAt = 0;
-            let lastPopupQrData = null;
-
-            function openGlobalQrScanner() {
-                if (typeof requireAuth === 'function' && !requireAuth()) return;
-                const modal = document.getElementById('globalQrScannerModal');
-                if (!modal) return;
-                modal.classList.add('open');
-                modal.setAttribute('aria-hidden', 'false');
-                document.body.style.overflow = 'hidden';
-                startGlobalScanCamera();
-            }
-
-            function closeGlobalQrScanner() {
-                stopGlobalScanCamera();
-                const modal = document.getElementById('globalQrScannerModal');
-                if (modal) {
-                    modal.classList.remove('open');
-                    modal.setAttribute('aria-hidden', 'true');
-                }
-                document.body.style.overflow = '';
-            }
-
-            function startGlobalScanCamera() {
-                const video = document.getElementById('globalScanVideo');
-                const status = document.getElementById('globalScanStatus');
-                if (typeof jsQR === 'undefined') {
-                    if (status) { status.textContent = 'Scanner indisponible'; status.style.color = '#ef4444'; }
-                    return;
-                }
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    if (status) { status.textContent = 'Caméra non supportée'; status.style.color = '#ef4444'; }
-                    return;
-                }
-                if (status) { status.textContent = 'Ouverture de la caméra…'; status.style.color = '#6b7280'; }
-
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
-                    .then(stream => {
-                        globalScanStream = stream;
-                        video.srcObject = stream;
-                        video.setAttribute('playsinline', 'true');
-                        video.setAttribute('webkit-playsinline', 'true');
-                        const playPromise = video.play();
-                        if (playPromise && playPromise.catch) playPromise.catch(err => console.warn('globalScan video.play:', err));
-                        globalScanActive = true;
-                        globalLastScanAt = 0;
-                        if (status) { status.textContent = 'Caméra active — pointez vers le QR'; status.style.color = '#10b981'; }
-                        scanGlobalFrame();
-                    })
-                    .catch(err => {
-                        console.error('Erreur caméra globale:', err);
-                        if (status) { status.textContent = 'Accès caméra refusé'; status.style.color = '#ef4444'; }
-                    });
-            }
-
-            function stopGlobalScanCamera() {
-                globalScanActive = false;
-                if (globalScanStream) {
-                    globalScanStream.getTracks().forEach(t => t.stop());
-                    globalScanStream = null;
-                }
-                const video = document.getElementById('globalScanVideo');
-                if (video) video.srcObject = null;
-                if (globalScanAnimId) cancelAnimationFrame(globalScanAnimId);
-            }
-
-            function scanGlobalFrame() {
-                const video = document.getElementById('globalScanVideo');
-                const canvas = document.getElementById('globalScanCanvas');
-                if (!globalScanActive || !video || !canvas) return;
-
-                if (typeof jsQR === 'undefined') {
-                    globalScanAnimId = requestAnimationFrame(scanGlobalFrame);
-                    return;
-                }
-                if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-                    globalScanAnimId = requestAnimationFrame(scanGlobalFrame);
-                    return;
-                }
-
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                try {
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-                    if (code && code.data) {
-                        const now = Date.now();
-                        if (now - globalLastScanAt < 2500) {
-                            globalScanAnimId = requestAnimationFrame(scanGlobalFrame);
-                            return;
-                        }
-                        globalLastScanAt = now;
-                        closeGlobalQrScanner();
-                        handleQrScanDetected(code.data.trim());
-                        return;
-                    }
-                } catch (e) {
-                    console.error('Erreur scan global:', e);
-                }
-                globalScanAnimId = requestAnimationFrame(scanGlobalFrame);
-            }
-
-            function closeQrScanPopup() {
-                const popup = document.getElementById('qrScanResultPopup');
-                if (popup) {
-                    popup.classList.remove('open');
-                    popup.setAttribute('aria-hidden', 'true');
-                }
-            }
-
-            function goToVerifyFromPopup() {
-                closeQrScanPopup();
-                if (typeof switchTab === 'function') {
-                    const btn = document.querySelector('.nav-tab[data-tab="verify"], .mobile-nav-item[data-tab="verify"]');
-                    switchTab('verify', btn);
-                }
-                if (lastPopupQrData) {
-                    const resultDiv = document.getElementById('verifyResult');
-                    const contentDiv = document.getElementById('verifyContent');
-                    if (resultDiv && contentDiv) {
-                        resultDiv.style.display = 'block';
-                        displayGuestVerificationResult(lastPopupQrData, resultDiv, contentDiv);
-                        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }
-            }
-
-            function showQrScanPopup(qrData, isError) {
-                const popup = document.getElementById('qrScanResultPopup');
-                const content = document.getElementById('qrScanPopupContent');
-                if (!popup || !content) return;
-
-                if (isError) {
-                    content.innerHTML = `
-                        <div class="qr-scan-popup-mini">
-                            <div class="qr-scan-popup-status error"><i class="fa-solid fa-circle-xmark"></i> Code non reconnu</div>
-                            <p style="color:var(--text-muted);font-size:13px;margin:0;">Aucune invitation ne correspond à ce QR code.</p>
-                        </div>`;
-                    lastPopupQrData = null;
-                } else {
-                    lastPopupQrData = qrData;
-                    const guest = qrData.guest || {};
-                    const ceremony = qrData.ceremony || {};
-                    const status = getGuestVerificationStatus(qrData);
-                    const statusKey = qrData.isDuplicate ? 'duplicate' : (status.className.includes('pending') ? 'pending' : (status.className.includes('expired') ? 'expired' : 'valid'));
-                    const fullName = `${guest.firstName || guest.fullName || ''} ${guest.lastName || guest.postName || ''}`.trim() || '—';
-
-                    content.innerHTML = `
-                        <div class="qr-scan-popup-mini">
-                            <div class="qr-scan-popup-status ${statusKey}">
-                                <i class="fa-solid ${status.icon}"></i> ${escapeVerifyHtml(status.label)}
-                            </div>
-                            <p class="qr-scan-popup-name">${escapeVerifyHtml(fullName)}</p>
-                            <p class="qr-scan-popup-honorific">${escapeVerifyHtml(guest.honorific || 'Invité')}</p>
-                            ${qrData.quickCode ? `<div class="qr-scan-popup-code">Code ${escapeVerifyHtml(qrData.quickCode)}</div>` : ''}
-                            <div class="qr-scan-popup-details">
-                                <div class="qr-scan-popup-detail"><span>Place</span><strong>${escapeVerifyHtml(guest.seat || '—')}</strong></div>
-                                <div class="qr-scan-popup-detail"><span>Personnes</span><strong>${guest.personCount || guest.count || 1}</strong></div>
-                                <div class="qr-scan-popup-detail"><span>Téléphone</span><strong>${escapeVerifyHtml(guest.phone || '—')}</strong></div>
-                                <div class="qr-scan-popup-detail"><span>Post-nom</span><strong>${escapeVerifyHtml(guest.postName || '—')}</strong></div>
-                            </div>
-                            <div class="qr-scan-popup-ceremony">
-                                <strong><i class="fa-solid fa-champagne-glasses"></i> ${escapeVerifyHtml(ceremony.name || '—')}</strong>
-                                <span>${escapeVerifyHtml(ceremony.type || '')} · ${escapeVerifyHtml(ceremony.location || '')}</span>
-                            </div>
-                        </div>`;
-                }
-
-                popup.classList.add('open');
-                popup.setAttribute('aria-hidden', 'false');
-            }
-
-            function handleQrScanDetected(rawText) {
-                if (typeof reloadAppDataFromStorage === 'function') reloadAppDataFromStorage();
-
-                const codeInput = document.getElementById('verifyCode');
-                if (codeInput) codeInput.value = rawText;
-
-                const parsed = parseVerifyInput(rawText);
-                let qrData = null;
-                let isDuplicate = false;
-
-                if (parsed.kind === 'guest_qr') {
-                    qrData = parsed.data;
-                    const found = findGuestInAllCeremonies({
-                        guestId: qrData.id || qrData.guest?.id,
-                        quickCode: qrData.quickCode || qrData.guest?.quickCode,
-                        ceremonyId: qrData.ceremonyId || qrData.ceremony?.id,
-                    });
-                    if (found) {
-                        isDuplicate = recordGuestScan(found.ceremony, found.guest, 'qr-scan');
-                        if (isDuplicate) {
-                            showAlarm('⚠️ DOUBLON', 'Cette invitation a déjà été scannée.', 'danger');
-                            qrData.isDuplicate = true;
-                        }
-                    }
-                } else if (parsed.kind === 'qra_compact' || parsed.kind === 'quick_code') {
-                    const found = findGuestInAllCeremonies({
-                        guestId: parsed.guestId,
-                        quickCode: parsed.code || parsed.quickCode,
-                        ceremonyId: parsed.ceremonyId,
-                    });
-                    if (found) {
-                        isDuplicate = recordGuestScan(found.ceremony, found.guest, 'qr-scan');
-                        if (isDuplicate) showAlarm('⚠️ DOUBLON', 'Cette invitation a déjà été scannée.', 'danger');
-                        qrData = buildGuestQRDataFromRecords(found.ceremony, found.guest, { isDuplicate });
-                    }
-                } else if (parsed.kind === 'raw') {
-                    const found = findGuestInAllCeremonies({ quickCode: parsed.code });
-                    if (found) {
-                        qrData = buildGuestQRDataFromRecords(found.ceremony, found.guest);
-                    }
-                }
-
-                if (qrData) {
-                    const enriched = enrichGuestQRData(qrData);
-                    showQrScanPopup(enriched);
-
-                    const resultDiv = document.getElementById('verifyResult');
-                    const contentDiv = document.getElementById('verifyContent');
-                    if (resultDiv && contentDiv) {
-                        resultDiv.style.display = 'block';
-                        displayGuestVerificationResult(enriched, resultDiv, contentDiv);
-                    }
-                    if (typeof refreshAppViews === 'function') refreshAppViews();
-                } else {
-                    showQrScanPopup(null, true);
-                }
             }
 
             function parseVerifyInput(rawCode) {
@@ -1999,11 +1769,6 @@
                         guestId: qraMatch[2],
                         quickCode: qraMatch[3],
                     };
-                }
-
-                const urlMatch = trimmed.match(/\/v\/(\d{5})(?:[/?#]|$)/i);
-                if (urlMatch) {
-                    return { kind: 'quick_code', code: urlMatch[1] };
                 }
 
                 return { kind: 'raw', code: trimmed };
@@ -2274,11 +2039,6 @@
         window.verifyCode = verifyCode;
         window.toggleVerifyScanner = toggleVerifyScanner;
         window.stopVerifyCamera = stopVerifyCamera;
-        window.openGlobalQrScanner = openGlobalQrScanner;
-        window.closeGlobalQrScanner = closeGlobalQrScanner;
-        window.closeQrScanPopup = closeQrScanPopup;
-        window.goToVerifyFromPopup = goToVerifyFromPopup;
-        window.handleQrScanDetected = handleQrScanDetected;
 
         function escapeVerifyHtml(value) {
             return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -4536,15 +4296,10 @@
 
         // ======================== GESTION DES QR CODES INVITÉS ========================
 
-        function renderQRIntoElement(container, text, size, options) {
+        function renderQRIntoElement(container, text, size, useHighCorrection) {
             if (!container || !text) return false;
             size = size || 120;
-            options = options || {};
             container.innerHTML = '';
-
-            const correctLevel = options.correctLevel === 'H'
-                ? (typeof QRCode !== 'undefined' ? QRCode.CorrectLevel.H : undefined)
-                : (options.correctLevel === 'L' && typeof QRCode !== 'undefined' ? QRCode.CorrectLevel.L : (typeof QRCode !== 'undefined' ? QRCode.CorrectLevel.M : undefined));
 
             try {
                 if (typeof QRCode !== 'undefined') {
@@ -4552,9 +4307,9 @@
                         text: String(text),
                         width: size,
                         height: size,
-                        colorDark: options.colorDark || '#0f172a',
-                        colorLight: options.colorLight || '#ffffff',
-                        correctLevel: correctLevel
+                        colorDark: '#0f172a',
+                        colorLight: '#ffffff',
+                        correctLevel: useHighCorrection ? QRCode.CorrectLevel.H : QRCode.CorrectLevel.M
                     });
                     return true;
                 }
@@ -4579,34 +4334,6 @@
                 localStorage.setItem('ceremonies', JSON.stringify(ceremonies));
             }
             return 'QRA:' + ceremony.id + ':' + guest.id + ':' + guest.quickCode;
-        }
-
-        function renderGuestQRIntoElement(container, ceremony, guest, size) {
-            if (!container || !ceremony || !guest) return false;
-            size = size || 120;
-            const payload = buildGuestQRPayload(ceremony, guest);
-            container.innerHTML = '';
-            container.classList.add('guest-qr-branded');
-
-            const frame = document.createElement('div');
-            frame.className = 'guest-qr-frame';
-
-            const qrInner = document.createElement('div');
-            qrInner.className = 'guest-qr-canvas';
-
-            const label = document.createElement('div');
-            label.className = 'guest-qr-code-label';
-            label.textContent = guest.quickCode || '';
-
-            frame.appendChild(qrInner);
-            frame.appendChild(label);
-            container.appendChild(frame);
-
-            return renderQRIntoElement(qrInner, payload, size, {
-                correctLevel: 'H',
-                colorDark: '#1e3a8a',
-                colorLight: '#ffffff',
-            });
         }
 
         function buildGuestQRData(ceremony, guest) {
@@ -4668,7 +4395,8 @@
 
                 try {
                     const guestQRData = buildGuestQRData(ceremony, guest);
-                    const ok = renderGuestQRIntoElement(qrContainer, ceremony, guest, 120);
+                    const qrText = buildGuestQRPayload(ceremony, guest);
+                    const ok = renderQRIntoElement(qrContainer, qrText, 120, true);
                     if (!ok) {
                         qrContainer.innerHTML = '<p style="font-size: 10px; color: #ef4444; text-align: center; padding: 20px 8px;">QR indisponible</p>';
                     }
@@ -4708,7 +4436,7 @@
             try {
                 const qrContainer = document.getElementById('guestQRCodeContainer');
                 if (!qrContainer) return;
-                renderGuestQRIntoElement(qrContainer, ceremony, guest, 256);
+                renderQRIntoElement(qrContainer, buildGuestQRPayload(ceremony, guest), 256, true);
 
                 document.getElementById('guestQRModal').style.display = 'flex';
             } catch (error) {

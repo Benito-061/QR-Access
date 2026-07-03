@@ -392,7 +392,7 @@
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Vérifier une invitation</h1>
-                    <p class="page-subtitle">Scannez ou saisissez un code QR, un code rapide ou un identifiant</p>
+                    <p class="page-subtitle">Vérifiez une invitation par code à 5 chiffres ou par scan QR</p>
                 </div>
             </div>
 
@@ -402,20 +402,24 @@
                         <h2><i class="fa-solid fa-clipboard-check"></i> Vérification</h2>
                     </div>
                     <div class="form-group">
-                        <label for="verifyCode">Code de vérification</label>
+                        <label for="verifyCode"><i class="fa-solid fa-hashtag"></i> Option 1 — Code à 5 chiffres</label>
                         <div class="input-with-actions">
-                            <input type="text" id="verifyCode" placeholder="QR code, code 5 chiffres ou ID">
+                            <input type="text" id="verifyCode" placeholder="Ex : 45892" maxlength="20" inputmode="numeric" autocomplete="off">
                             <button id="pasteVerifyBtn" type="button" class="btn btn-ghost btn-small" onclick="pasteIntoVerify('verifyCode','pasteVerifyBtn', true)" title="Coller">
                                 <i class="fa-solid fa-paste"></i>
                             </button>
-                            <button id="startScanBtn" type="button" class="btn btn-ghost btn-small" onclick="toggleVerifyScanner()" title="Scanner">
-                                <i class="fa-solid fa-camera"></i>
-                            </button>
                         </div>
                     </div>
-                    <button id="verifyButton" type="button" class="btn btn-success btn-icon" style="width: 100%;" onclick="verifyCode()">
-                        <i class="fa-solid fa-check"></i> Vérifier
+                    <button id="verifyButton" type="button" class="btn btn-success btn-icon" style="width: 100%; margin-bottom: 16px;" onclick="verifyCode()">
+                        <i class="fa-solid fa-check"></i> Vérifier le code
                     </button>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label><i class="fa-solid fa-camera"></i> Option 2 — Scanner le QR code</label>
+                        <button id="startScanBtn" type="button" class="btn btn-primary btn-icon" style="width: 100%;" onclick="toggleVerifyScanner()">
+                            <i class="fa-solid fa-qrcode"></i> Ouvrir la caméra
+                        </button>
+                    </div>
 
                     <div id="verifyScanner" class="scanner-panel" style="display:none;">
                         <video id="verifyVideo" autoplay playsinline></video>
@@ -439,8 +443,8 @@
                     </div>
                     <div class="info-panel">
                         <i class="fa-solid fa-mobile-screen"></i>
-                        <p style="color: var(--text-muted); margin-bottom: 6px;">Utilisez le bouton <strong>Scanner</strong> (en bas à droite) ou la caméra ci-dessus</p>
-                        <p style="font-size: 12px; color: var(--text-muted);">Les codes détectés affichent une fenêtre avec les informations de l'invité</p>
+                        <p style="color: var(--text-muted); margin-bottom: 6px;">Saisissez le code à 5 chiffres ou scannez le QR avec la caméra</p>
+                        <p style="font-size: 12px; color: var(--text-muted);">Le résultat s'affiche automatiquement ci-dessous après vérification</p>
                     </div>
                 </div>
             </div>
@@ -642,16 +646,6 @@
             </div>
         </main>
         @include('partials.mobile-bottom-nav', ['activeTab' => $activeTab ?? 'dashboard'])
-
-        <button type="button"
-                id="globalScanFab"
-                class="global-scan-fab"
-                onclick="openGlobalQrScanner()"
-                title="Scanner un QR code"
-                aria-label="Ouvrir le scanner QR">
-            <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
-            <span>Scanner</span>
-        </button>
     </div>
 
 
