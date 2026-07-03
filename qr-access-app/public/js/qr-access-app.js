@@ -2483,16 +2483,16 @@
 
         // Les details du visiteur
         function showCeremonyHistoryDetails(ceremonyId) {
-            const ceremony = ceremonies.find(c => String(c.id) === String(ceremonyId));
+            const ceremony = getCeremonyForHistory(ceremonyId);
             if (!ceremony) return;
 
-            const ceremonyName = ceremony.data?.name || ceremony.name || `Cérémonie ${ceremony.id}`;
-            const brideName = ceremony.data?.brideName || 'N/A';
-            const groomName = ceremony.data?.groomName || 'N/A';
-            const location = ceremony.data?.location || 'N/A';
-            const type = ceremony.data?.type || 'N/A';
-            const start = ceremony.data?.startDateTime ? new Date(ceremony.data.startDateTime).toLocaleString('fr-FR') : 'N/A';
-            const end = ceremony.data?.endDateTime ? new Date(ceremony.data.endDateTime).toLocaleString('fr-FR') : 'N/A';
+            const ceremonyName = formatCeremonyField(ceremony.data?.name || ceremony.name, `Cérémonie ${ceremony.id}`);
+            const brideName = formatCeremonyField(ceremony.data?.brideName);
+            const groomName = formatCeremonyField(ceremony.data?.groomName);
+            const location = formatCeremonyField(ceremony.data?.location);
+            const type = formatCeremonyField(ceremony.data?.type);
+            const start = formatCeremonyDateTime(ceremony.data?.startDateTime);
+            const end = formatCeremonyDateTime(ceremony.data?.endDateTime);
             const guestCount = ceremony.guests ? ceremony.guests.length : 0;
 
             alert(`Détails de la cérémonie:\n\nNom: ${ceremonyName}\nMariée: ${brideName}\nMarié: ${groomName}\nLieu: ${location}\nType: ${type}\nDébut: ${start}\nFin: ${end}\nInvités: ${guestCount}`);
@@ -2538,23 +2538,91 @@
             }
         }
 
+        function pickCeremonyField(...values) {
+            for (const value of values) {
+                if (value !== null && value !== undefined && String(value).trim() !== '') {
+                    return value;
+                }
+            }
+            return '';
+        }
+
+        function mergeCeremonyRecords(ceremony, managed) {
+            const cerData = ceremony?.data || {};
+            const mgmtData = managed?.data || {};
+            const mergedData = { ...cerData };
+
+            Object.keys(mgmtData).forEach(key => {
+                const value = mgmtData[key];
+                if (value !== null && value !== undefined && String(value).trim() !== '') {
+                    mergedData[key] = value;
+                }
+            });
+
+            if (!mergedData.startDateTime) {
+                mergedData.startDateTime = pickCeremonyField(cerData.startDateTime, mgmtData.startDateTime, mgmtData.weddingDate);
+            }
+            mergedData.name = pickCeremonyField(mergedData.name, ceremony?.name, managed?.name, mgmtData.name);
+            mergedData.brideName = pickCeremonyField(mergedData.brideName, cerData.brideName, mgmtData.brideName);
+            mergedData.groomName = pickCeremonyField(mergedData.groomName, cerData.groomName, mgmtData.groomName);
+            mergedData.location = pickCeremonyField(mergedData.location, cerData.location, mgmtData.location);
+            mergedData.type = pickCeremonyField(mergedData.type, cerData.type, mgmtData.type);
+            mergedData.endDateTime = pickCeremonyField(mergedData.endDateTime, cerData.endDateTime, mgmtData.endDateTime);
+
+            const id = ceremony?.id ?? managed?.id;
+            return {
+                id,
+                name: pickCeremonyField(mergedData.name, ceremony?.name, managed?.name) || (id ? `Cérémonie ${id}` : 'Cérémonie'),
+                data: mergedData,
+                guests: ceremony?.guests || managed?.guests || [],
+            };
+        }
+
+        function getCeremonyForHistory(ceremonyId) {
+            reloadAppDataFromStorage();
+            const ceremony = (ceremonies || []).find(c => String(c.id) === String(ceremonyId));
+            const managed = (managedCeremonies || []).find(m => String(m.id) === String(ceremonyId));
+            if (!ceremony && !managed) return null;
+            return mergeCeremonyRecords(ceremony, managed);
+        }
+
         function getCeremoniesForHistorySearch() {
             reloadAppDataFromStorage();
-            return (ceremonies || []).map(cer => {
+            const mergedById = new Map();
+
+            (ceremonies || []).forEach(cer => {
                 const mgmt = (managedCeremonies || []).find(m => String(m.id) === String(cer.id));
-                if (!mgmt?.data) return cer;
-                return {
-                    ...cer,
-                    data: { ...(cer.data || {}), ...mgmt.data },
-                };
+                mergedById.set(String(cer.id), mergeCeremonyRecords(cer, mgmt));
             });
+
+            (managedCeremonies || []).forEach(mgmt => {
+                const key = String(mgmt.id);
+                if (!mergedById.has(key)) {
+                    const cer = (ceremonies || []).find(c => String(c.id) === key);
+                    mergedById.set(key, mergeCeremonyRecords(cer, mgmt));
+                }
+            });
+
+            return Array.from(mergedById.values());
+        }
+
+        function formatCeremonyField(value, fallback) {
+            fallback = fallback === undefined ? '—' : fallback;
+            if (value === null || value === undefined || String(value).trim() === '') return fallback;
+            return String(value);
+        }
+
+        function formatCeremonyDateTime(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            return isNaN(date.getTime()) ? '—' : date.toLocaleString('fr-FR');
         }
 
         function guestMatchesQuery(guest, queryLower) {
             if (!guest || !queryLower) return false;
-            const combined = `${guest.firstName || ''} ${guest.lastName || ''}`.trim().toLowerCase();
+            const combined = `${guest.firstName || ''} ${guest.lastName || ''} ${guest.postName || ''}`.trim().toLowerCase();
             if (combined && combined.includes(queryLower)) return true;
-            const fields = [guest.fullName, guest.full_name, guest.nom, guest.phone, guest.quickCode];
+            const fields = [guest.fullName, guest.full_name, guest.nom, guest.phone, guest.quickCode, guest.lastName, guest.postName];
             return fields.some(v => v && String(v).toLowerCase().includes(queryLower));
         }
 
@@ -2609,13 +2677,13 @@
 
             const queryLower = document.getElementById('historySearch')?.value.trim().toLowerCase() || '';
             container.innerHTML = results.map(ceremony => {
-                const ceremonyName = ceremony.data?.name || ceremony.name || `Cérémonie ${ceremony.id}`;
-                const brideName = ceremony.data?.brideName || 'N/A';
-                const groomName = ceremony.data?.groomName || 'N/A';
-                const location = ceremony.data?.location || 'N/A';
-                const type = ceremony.data?.type || 'N/A';
-                const start = ceremony.data?.startDateTime ? new Date(ceremony.data.startDateTime).toLocaleString('fr-FR') : 'N/A';
-                const end = ceremony.data?.endDateTime ? new Date(ceremony.data.endDateTime).toLocaleString('fr-FR') : 'N/A';
+                const ceremonyName = formatCeremonyField(ceremony.data?.name || ceremony.name, `Cérémonie ${ceremony.id}`);
+                const brideName = formatCeremonyField(ceremony.data?.brideName);
+                const groomName = formatCeremonyField(ceremony.data?.groomName);
+                const location = formatCeremonyField(ceremony.data?.location);
+                const type = formatCeremonyField(ceremony.data?.type);
+                const start = formatCeremonyDateTime(ceremony.data?.startDateTime);
+                const end = formatCeremonyDateTime(ceremony.data?.endDateTime);
                 const matchedGuest = ceremony.guests?.find(g => guestMatchesQuery(g, queryLower)) || null;
                 const quickCodeLabel = matchedGuest?.quickCode
                     ? `Code: ${matchedGuest.quickCode}`
@@ -2673,14 +2741,15 @@
             const searchableCeremonies = getCeremoniesForHistorySearch();
 
             const results = searchableCeremonies.filter(ceremony => {
-                const name = (ceremony.data?.name || ceremony.name || '').toString().toLowerCase();
-                const bride = (ceremony.data?.brideName || '').toString().toLowerCase();
-                const groom = (ceremony.data?.groomName || '').toString().toLowerCase();
-                const location = (ceremony.data?.location || '').toString().toLowerCase();
-                const type = (ceremony.data?.type || '').toString().toLowerCase();
+                const data = ceremony.data || {};
+                const name = (data.name || ceremony.name || '').toString().toLowerCase();
+                const bride = (data.brideName || '').toString().toLowerCase();
+                const groom = (data.groomName || '').toString().toLowerCase();
+                const location = (data.location || '').toString().toLowerCase();
+                const type = (data.type || '').toString().toLowerCase();
                 const id = (ceremony.id || '').toString().toLowerCase();
-                const startDate = ceremony.data?.startDateTime ? new Date(ceremony.data.startDateTime) : null;
-                const endDate = ceremony.data?.endDateTime ? new Date(ceremony.data.endDateTime) : null;
+                const startDate = data.startDateTime ? new Date(data.startDateTime) : null;
+                const endDate = data.endDateTime ? new Date(data.endDateTime) : null;
                 const startDateString = startDate ? startDate.toLocaleDateString('fr-FR') : '';
                 const endDateString = endDate ? endDate.toLocaleDateString('fr-FR') : '';
                 const guestMatch = ceremony.guests?.some(guest => guestMatchesQuery(guest, queryLower));

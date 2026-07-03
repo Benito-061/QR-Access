@@ -31,13 +31,14 @@ class CeremonyManagement extends Model
 
     public function toLegacyArray(): array
     {
+        $ceremonyData = $this->ceremony?->toLegacyArray()['data'] ?? [];
+
         return [
             'id' => $this->ceremony_id,
-            'data' => [
-                'brideName' => $this->ceremony?->bride_name,
-                'groomName' => $this->ceremony?->groom_name,
+            'name' => $this->ceremony?->name,
+            'data' => array_merge($ceremonyData, [
                 'weddingDate' => $this->wedding_date?->toIso8601String(),
-            ],
+            ]),
             'supplies' => [
                 'plates' => $this->supplies_plates,
                 'forks' => $this->supplies_forks,
