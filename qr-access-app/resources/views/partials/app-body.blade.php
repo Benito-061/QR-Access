@@ -439,8 +439,8 @@
                     </div>
                     <div class="info-panel">
                         <i class="fa-solid fa-mobile-screen"></i>
-                        <p style="color: var(--text-muted); margin-bottom: 6px;">Utilisez le scanner pour automatiser la vérification</p>
-                        <p style="font-size: 12px; color: var(--text-muted);">Les codes détectés seront vérifiés automatiquement</p>
+                        <p style="color: var(--text-muted); margin-bottom: 6px;">Utilisez le bouton <strong>Scanner</strong> (en bas à droite) ou la caméra ci-dessus</p>
+                        <p style="font-size: 12px; color: var(--text-muted);">Les codes détectés affichent une fenêtre avec les informations de l'invité</p>
                     </div>
                 </div>
             </div>
@@ -642,6 +642,16 @@
             </div>
         </main>
         @include('partials.mobile-bottom-nav', ['activeTab' => $activeTab ?? 'dashboard'])
+
+        <button type="button"
+                id="globalScanFab"
+                class="global-scan-fab"
+                onclick="openGlobalQrScanner()"
+                title="Scanner un QR code"
+                aria-label="Ouvrir le scanner QR">
+            <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+            <span>Scanner</span>
+        </button>
     </div>
 
 

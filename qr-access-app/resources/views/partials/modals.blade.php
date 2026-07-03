@@ -256,3 +256,40 @@
             </div>
         </div>
     </div>
+
+    <!-- Scanner QR global (accessible depuis toute l'application) -->
+    <div id="globalQrScannerModal" class="global-qr-scanner-modal" aria-hidden="true" role="dialog" aria-label="Scanner QR">
+        <div class="global-qr-scanner-backdrop" onclick="closeGlobalQrScanner()"></div>
+        <div class="global-qr-scanner-sheet">
+            <div class="global-qr-scanner-header">
+                <h3><i class="fa-solid fa-qrcode"></i> Scanner une invitation</h3>
+                <button type="button" class="modal-close" onclick="closeGlobalQrScanner()" aria-label="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="global-qr-scanner-viewport">
+                <video id="globalScanVideo" autoplay playsinline muted></video>
+                <canvas id="globalScanCanvas" style="display:none;"></canvas>
+                <div class="global-qr-scan-frame" aria-hidden="true"></div>
+            </div>
+            <p id="globalScanStatus" class="global-qr-scanner-status">Initialisation de la caméra…</p>
+            <p class="global-qr-scanner-hint">Placez le QR code dans le cadre — détection automatique</p>
+        </div>
+    </div>
+
+    <!-- Popup résultat après scan -->
+    <div id="qrScanResultPopup" class="qr-scan-popup" aria-hidden="true" role="dialog" aria-label="Résultat du scan">
+        <div class="qr-scan-popup-backdrop" onclick="closeQrScanPopup()"></div>
+        <div class="qr-scan-popup-card">
+            <button type="button" class="qr-scan-popup-close" onclick="closeQrScanPopup()" aria-label="Fermer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="qrScanPopupContent"></div>
+            <div class="qr-scan-popup-actions">
+                <button type="button" class="btn btn-secondary btn-small" onclick="closeQrScanPopup()">Fermer</button>
+                <button type="button" class="btn btn-primary btn-small" onclick="goToVerifyFromPopup()">
+                    <i class="fa-solid fa-clipboard-check"></i> Détails complets
+                </button>
+            </div>
+        </div>
+    </div>
