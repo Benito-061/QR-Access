@@ -1163,15 +1163,7 @@
                 
                 // Encode the enriched data as JSON string
                 const qrDataString = JSON.stringify(qrData);
-                
-                const qr = new QRCode(qrContainer, {
-                    text: qrDataString,
-                    width: 256,
-                    height: 256,
-                    colorDark: "#0f172a",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
+                renderQRIntoElement(qrContainer, qrDataString, 256);
 
                 const nameEl = document.getElementById(nameId);
                 if (nameEl) nameEl.textContent = visitor.name;
@@ -3748,7 +3740,8 @@
         }
 
         function renderGuestsTable() {
-            const ceremony = ceremonies.find(c => c.id === activeCeremonyId);
+            if (typeof reloadAppDataFromStorage === 'function') reloadAppDataFromStorage();
+            const ceremony = ceremonies.find(c => String(c.id) === String(activeCeremonyId));
             if (!ceremony) return;
 
             // Update ceremony info display
@@ -4251,20 +4244,88 @@
 
         // ======================== GESTION DES QR CODES INVITÉS ========================
 
+        function renderQRIntoElement(container, text, size) {
+            if (!container || !text) return false;
+            size = size || 120;
+            container.innerHTML = '';
+
+            try {
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(container, {
+                        text: String(text),
+                        width: size,
+                        height: size,
+                        colorDark: '#0f172a',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    return true;
+                }
+            } catch (error) {
+                console.warn('QRCode library error:', error);
+            }
+
+            const img = document.createElement('img');
+            img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(String(text));
+            img.alt = 'QR Code';
+            img.width = size;
+            img.height = size;
+            img.style.display = 'block';
+            img.style.maxWidth = '100%';
+            container.appendChild(img);
+            return true;
+        }
+
+        function buildGuestQRData(ceremony, guest) {
+            if (!guest.quickCode) {
+                guest.quickCode = String(Math.floor(10000 + Math.random() * 90000));
+                localStorage.setItem('ceremonies', JSON.stringify(ceremonies));
+            }
+            const data = ceremony.data || {};
+            return {
+                type: 'GUEST',
+                id: guest.id,
+                quickCode: guest.quickCode,
+                ceremonyId: ceremony.id,
+                guest: {
+                    id: guest.id,
+                    lastName: guest.lastName || '',
+                    firstName: guest.firstName || '',
+                    postName: guest.postName || '',
+                    honorific: guest.honorific || '',
+                    phone: guest.phone || '',
+                    seat: guest.seat || '',
+                    personCount: guest.count || guest.personCount || 1,
+                    notes: guest.notes || ''
+                },
+                ceremony: {
+                    id: ceremony.id,
+                    name: data.name || ceremony.name || `Cérémonie ${ceremony.id}`,
+                    type: data.type || '-',
+                    location: data.location || '-',
+                    startDateTime: data.startDateTime || '',
+                    families: data.family1 ? [data.family1, data.family2].filter(Boolean) : [],
+                    brideName: data.brideName || '',
+                    groomName: data.groomName || ''
+                },
+                timestamp: new Date().toISOString()
+            };
+        }
+
         function generateGuestQRInline(guestId) {
-            const ceremony = ceremonies.find(c => c.id === activeCeremonyId);
+            if (typeof reloadAppDataFromStorage === 'function') reloadAppDataFromStorage();
+            const ceremony = ceremonies.find(c => String(c.id) === String(activeCeremonyId));
             if (!ceremony) {
                 console.warn(`Ceremony ${activeCeremonyId} not found`);
                 return;
             }
 
-            const guest = ceremony.guests.find(g => g.id === guestId);
+            const guest = (ceremony.guests || []).find(g => String(g.id) === String(guestId));
             if (!guest) {
                 console.warn(`Guest ${guestId} not found in ceremony`);
                 return;
             }
 
-            // Wait a bit for DOM to be ready
             setTimeout(() => {
                 const qrContainer = document.getElementById(`qr-${guest.id}`);
                 if (!qrContainer) {
@@ -4273,57 +4334,18 @@
                 }
 
                 try {
-                    const guestQRData = {
-                        type: 'GUEST',
-                        id: guest.id,
-                        quickCode: guest.quickCode || String(Math.floor(10000 + Math.random() * 90000)),
-                        ceremonyId: ceremony.id,
-                        guest: {
-                            id: guest.id,
-                            lastName: guest.lastName || '',
-                            firstName: guest.firstName || '',
-                            postName: guest.postName || '',
-                            honorific: guest.honorific || '',
-                            phone: guest.phone || '',
-                            seat: guest.seat || '',
-                            personCount: guest.count || 1,
-                            notes: guest.notes || ''
-                        },
-                        ceremony: {
-                            id: ceremony.id,
-                            name: ceremony.data?.name || `Cérémonie ${ceremony.id}`,
-                            type: ceremony.data?.type || '-',
-                            location: ceremony.data?.location || '-',
-                            startDateTime: ceremony.data?.startDateTime || '',
-                            families: ceremony.data?.family1 ? [ceremony.data.family1, ceremony.data.family2].filter(f => f) : [],
-                            brideName: ceremony.data?.brideName || '',
-                            groomName: ceremony.data?.groomName || ''
-                        },
-                        timestamp: new Date().toISOString()
-                    };
-
+                    const guestQRData = buildGuestQRData(ceremony, guest);
                     const qrText = JSON.stringify(guestQRData);
-                    qrContainer.innerHTML = '';
-
-                    if (typeof QRCode !== 'undefined') {
-                        new QRCode(qrContainer, {
-                            text: qrText,
-                            width: 120,
-                            height: 120,
-                            colorDark: '#0f172a',
-                            colorLight: '#ffffff',
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
-                    } else {
-                        qrContainer.textContent = 'QR library manquante';
+                    const ok = renderQRIntoElement(qrContainer, qrText, 120);
+                    if (!ok) {
+                        qrContainer.innerHTML = '<p style="font-size: 10px; color: #ef4444; text-align: center; padding: 20px 8px;">QR indisponible</p>';
                     }
 
                     if (!window.guestQRData) window.guestQRData = {};
                     window.guestQRData[guest.id] = guestQRData;
-                    console.log(`✓ QR generated for guest ${guest.firstName} ${guest.lastName}`);
                 } catch (error) {
                     console.error(`Error generating QR for guest ${guest.id}:`, error);
-                    qrContainer.innerHTML = '<p style="font-size: 10px; color: #ef4444; text-align: center; padding: 40px 10px;">Erreur</p>';
+                    qrContainer.innerHTML = '<p style="font-size: 10px; color: #ef4444; text-align: center; padding: 20px 8px;">Erreur QR</p>';
                 }
             }, 200);
         }
@@ -4335,39 +4357,14 @@
 
 
         function generateGuestQRCode(guestId) {
-            const ceremony = ceremonies.find(c => c.id === activeCeremonyId);
+            if (typeof reloadAppDataFromStorage === 'function') reloadAppDataFromStorage();
+            const ceremony = ceremonies.find(c => String(c.id) === String(activeCeremonyId));
             if (!ceremony) return;
 
-            const guest = ceremony.guests.find(g => g.id === guestId);
+            const guest = (ceremony.guests || []).find(g => String(g.id) === String(guestId));
             if (!guest) return;
 
-            const guestQRData = {
-                type: 'GUEST',
-                id: guest.id,
-                quickCode: guest.quickCode || String(Math.floor(10000 + Math.random() * 90000)),
-                ceremonyId: ceremony.id,
-                guest: {
-                    id: guest.id,
-                    lastName: guest.lastName || '',
-                    firstName: guest.firstName || '',
-                    honorific: guest.honorific || '',
-                    phone: guest.phone || '',
-                    seat: guest.seat || '',
-                    personCount: guest.count || 1,
-                    notes: guest.notes || ''
-                },
-                ceremony: {
-                    id: ceremony.id,
-                    name: ceremony.data?.name || `Cérémonie ${ceremony.id}`,
-                    type: ceremony.data?.type || '-',
-                    location: ceremony.data?.location || '-',
-                    program: ceremony.data?.program || '-',
-                    families: ceremony.data?.family1 ? [ceremony.data.family1, ceremony.data.family2].filter(f => f) : [],
-                    brideName: ceremony.data?.brideName || '',
-                    groomName: ceremony.data?.groomName || ''
-                },
-                timestamp: new Date().toISOString()
-            };
+            const guestQRData = buildGuestQRData(ceremony, guest);
 
             window.currentGuestQRData = guestQRData;
             document.getElementById('guestQRName').textContent = `${guest.lastName} ${guest.postName ? ' ' + guest.postName : ''} ${guest.firstName}`;
@@ -4378,20 +4375,8 @@
 
             try {
                 const qrContainer = document.getElementById('guestQRCodeContainer');
-                qrContainer.innerHTML = '';
-
-                if (typeof QRCode !== 'undefined') {
-                    new QRCode(qrContainer, {
-                        text: JSON.stringify(guestQRData),
-                        width: 256,
-                        height: 256,
-                        colorDark: '#0f172a',
-                        colorLight: '#ffffff',
-                        correctLevel: QRCode.CorrectLevel.H
-                    });
-                } else {
-                    qrContainer.textContent = 'QR library manquante';
-                }
+                if (!qrContainer) return;
+                renderQRIntoElement(qrContainer, JSON.stringify(guestQRData), 256);
 
                 document.getElementById('guestQRModal').style.display = 'flex';
             } catch (error) {
