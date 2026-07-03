@@ -22,30 +22,30 @@
 
             <div class="stats-grid" id="statsGrid">
                 <div class="stat-box stat-box--blue">
-                    <div class="stat-icon"><i class="fa-solid fa-user-check"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-champagne-glasses"></i></div>
                     <div class="stat-content">
-                        <div class="stat-label">Rendez-vous actifs</div>
+                        <div class="stat-label">Cérémonies actives</div>
                         <div class="stat-value" id="activeCount">0</div>
                     </div>
                 </div>
                 <div class="stat-box stat-box--slate">
                     <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
                     <div class="stat-content">
-                        <div class="stat-label">Total créés</div>
+                        <div class="stat-label">Invités enregistrés</div>
                         <div class="stat-value" id="totalCount">0</div>
                     </div>
                 </div>
                 <div class="stat-box stat-box--amber">
-                    <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-qrcode"></i></div>
                     <div class="stat-content">
-                        <div class="stat-label">Expirations proches</div>
+                        <div class="stat-label">Scans aujourd'hui</div>
                         <div class="stat-value" id="expiringCount">0</div>
                     </div>
                 </div>
                 <div class="stat-box stat-box--teal" onclick="showDetailsList('ceremony')">
-                    <div class="stat-icon"><i class="fa-solid fa-champagne-glasses"></i></div>
+                    <div class="stat-icon"><i class="fa-solid fa-layer-group"></i></div>
                     <div class="stat-content">
-                        <div class="stat-label">Cérémonies actives</div>
+                        <div class="stat-label">Total cérémonies</div>
                         <div class="stat-value" id="ceremonyCount">0</div>
                     </div>
                 </div>
@@ -54,16 +54,16 @@
             <div class="main-content">
                 <div class="card">
                     <div class="card-header">
-                        <h2><i class="fa-solid fa-circle-check"></i> Rendez-vous actifs</h2>
-                        <span class="card-badge" id="activeBadge">0 actifs</span>
+                        <h2><i class="fa-solid fa-circle-check"></i> Cérémonies en cours</h2>
+                        <span class="card-badge" id="activeBadge">0 active</span>
                     </div>
                     <div class="visitors-grid" id="visitorsActive"></div>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
-                        <h2><i class="fa-solid fa-triangle-exclamation"></i> Alertes et expirations</h2>
-                        <span class="card-badge" id="expiringBadge">0 alertes</span>
+                        <h2><i class="fa-solid fa-hourglass-half"></i> Fin de cérémonie imminente</h2>
+                        <span class="card-badge" id="expiringBadge">0 alerte</span>
                     </div>
                     <div class="visitors-grid" id="visitorsExpiring"></div>
                 </div>

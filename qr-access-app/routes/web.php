@@ -15,10 +15,12 @@ Route::get('/', function () {
         return redirect()->route('invitee.gift');
     }
 
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
-});
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('welcome');
+})->name('welcome');
 
 Route::middleware('invitee.guest')->group(function () {
     Route::get('/invite/connexion', [GuestInviteeAuthController::class, 'create'])

@@ -434,7 +434,13 @@
             // Actualiser les donnees si on retourne au dashboard ou a l'historique
             try { localStorage.setItem('lastTab', tabName); } catch(e) { /* ignore */ }
             if (tabName === 'dashboard') updateDashboard();
-            if (tabName === 'history') updateAccessLog();
+            if (tabName === 'history') {
+                reloadAppDataFromStorage();
+                initHistorySearch();
+                updateAccessLog();
+                const historyQuery = document.getElementById('historySearch')?.value.trim();
+                if (historyQuery) performHistorySearch();
+            }
             if (tabName === 'gestionceremonies') {
                 syncAllCeremonies();
                 loadCeremonySelector();
@@ -1693,14 +1699,163 @@
                 verifyScanAnimationId = requestAnimationFrame(scanVerifyFrame);
             }
 
+            function parseVerifyInput(rawCode) {
+                const trimmed = (rawCode || '').trim();
+                if (!trimmed) return { kind: 'empty' };
+
+                const tryJson = (value) => {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (parsed && typeof parsed === 'object') {
+                            if (!parsed.type && (parsed.guest || parsed.ceremonyId || parsed.ceremony)) {
+                                parsed.type = 'GUEST';
+                            }
+                            if (parsed.type === 'GUEST' || parsed.guest || parsed.ceremonyId) {
+                                return { kind: 'guest_qr', data: parsed };
+                            }
+                        }
+                    } catch (e) { /* ignore */ }
+                    return null;
+                };
+
+                let parsed = tryJson(trimmed);
+                if (parsed) return parsed;
+
+                if (trimmed.includes('%7B') || trimmed.includes('%22')) {
+                    parsed = tryJson(decodeURIComponent(trimmed));
+                    if (parsed) return parsed;
+                }
+
+                if (/^\d{5}$/.test(trimmed)) {
+                    return { kind: 'quick_code', code: trimmed };
+                }
+
+                return { kind: 'raw', code: trimmed };
+            }
+
+            function findGuestInAllCeremonies({ guestId, quickCode, ceremonyId } = {}) {
+                if (typeof reloadAppDataFromStorage === 'function') reloadAppDataFromStorage();
+                for (const ceremony of ceremonies || []) {
+                    if (ceremonyId && String(ceremony.id) !== String(ceremonyId)) continue;
+                    const guests = ceremony.guests || [];
+                    let guest = null;
+                    if (guestId != null) {
+                        guest = guests.find(g => String(g.id) === String(guestId));
+                    }
+                    if (!guest && quickCode) {
+                        guest = guests.find(g => g.quickCode && String(g.quickCode) === String(quickCode));
+                    }
+                    if (guest) return { ceremony, guest };
+                }
+                return null;
+            }
+
+            function buildGuestQRDataFromRecords(ceremony, guest, extras = {}) {
+                const data = ceremony.data || {};
+                const firstName = guest.firstName || guest.fullName || '';
+                const lastName = guest.lastName || guest.postName || '';
+                return {
+                    type: 'GUEST',
+                    id: guest.id,
+                    quickCode: guest.quickCode || extras.quickCode || '',
+                    ceremonyId: ceremony.id,
+                    guest: {
+                        id: guest.id,
+                        lastName: lastName,
+                        firstName: firstName,
+                        postName: guest.postName || '',
+                        honorific: guest.honorific || '',
+                        phone: guest.phone || '',
+                        seat: guest.seat || '',
+                        personCount: guest.count || guest.personCount || 1,
+                        notes: guest.notes || '',
+                        fullName: guest.fullName || `${firstName} ${lastName}`.trim(),
+                    },
+                    ceremony: {
+                        id: ceremony.id,
+                        name: data.name || ceremony.name || `Cérémonie ${ceremony.id}`,
+                        type: data.type || '-',
+                        location: data.location || '-',
+                        startDateTime: data.startDateTime || '',
+                        brideName: data.brideName || '',
+                        groomName: data.groomName || '',
+                    },
+                    timestamp: extras.timestamp || new Date().toISOString(),
+                    isDuplicate: !!extras.isDuplicate,
+                };
+            }
+
+            function enrichGuestQRData(qrData) {
+                const found = findGuestInAllCeremonies({
+                    guestId: qrData.id || qrData.guest?.id,
+                    quickCode: qrData.quickCode || qrData.guest?.quickCode,
+                    ceremonyId: qrData.ceremonyId || qrData.ceremony?.id,
+                });
+
+                if (found) {
+                    return buildGuestQRDataFromRecords(found.ceremony, found.guest, {
+                        quickCode: qrData.quickCode || found.guest.quickCode,
+                        isDuplicate: qrData.isDuplicate,
+                        timestamp: qrData.timestamp || new Date().toISOString(),
+                    });
+                }
+
+                const guest = qrData.guest || {};
+                const ceremony = qrData.ceremony || {};
+                return {
+                    ...qrData,
+                    type: 'GUEST',
+                    guest: {
+                        ...guest,
+                        firstName: guest.firstName || guest.fullName || '',
+                        lastName: guest.lastName || guest.postName || '',
+                        personCount: guest.personCount || guest.count || 1,
+                    },
+                    ceremony: {
+                        ...ceremony,
+                        name: ceremony.name || ceremony.data?.name || 'Cérémonie',
+                    },
+                };
+            }
+
+            function recordGuestScan(ceremony, guest, source) {
+                if (!guest.scans) guest.scans = [];
+                guest.scans.push({ timestamp: new Date().toISOString(), source: source || 'qr-scan' });
+                localStorage.setItem('ceremonies', JSON.stringify(ceremonies));
+
+                const guestLabel = `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || guest.fullName || 'Invité';
+                accessLog.push({
+                    visitorName: guestLabel,
+                    location: ceremony.data?.location || ceremony.data?.name || 'Cérémonie',
+                    timestamp: new Date().toISOString(),
+                    result: 'approved',
+                    code: guest.quickCode || '',
+                });
+                localStorage.setItem('accessLog', JSON.stringify(accessLog));
+
+                if (typeof syncCeremonyToManagement === 'function') {
+                    syncCeremonyToManagement(ceremony.id);
+                }
+                if (typeof qrPersist === 'function') {
+                    qrPersist({ silent: true, skipRefresh: true });
+                }
+                return guest.scans.length > 1;
+            }
+
             function verifyCode() {
-            const code = document.getElementById('verifyCode').value.trim();
+            if (typeof reloadAppDataFromStorage === 'function') reloadAppDataFromStorage();
+
+            const codeInput = document.getElementById('verifyCode');
+            if (!codeInput) return;
+            const code = codeInput.value.trim();
             if (!code) return;
 
             const resultDiv = document.getElementById('verifyResult');
             const contentDiv = document.getElementById('verifyContent');
             const verifyCard = document.getElementById('verifyCard');
             const verifyButton = document.getElementById('verifyButton');
+            if (!resultDiv || !contentDiv) return;
+
             resultDiv.style.display = 'block';
             resultDiv.classList.remove('duplicate-blink');
             resultDiv.classList.remove('verify-duplicate-result');
@@ -1740,147 +1895,70 @@
                 }
             }
 
+            function showGuestVerification(qrData) {
+                const enriched = enrichGuestQRData(qrData);
+                displayGuestVerificationResult(enriched, resultDiv, contentDiv);
+                codeInput.value = '';
+            }
+
             try {
-                // Essayer d'abord de parser comme JSON (QR code d'invité)
-                let qrData = null;
-                try {
-                    qrData = JSON.parse(code);
-                } catch (e) {
-                    // Pas un JSON, c'est peut-être un code simple
-                }
+                const parsed = parseVerifyInput(code);
 
-                // Si c'est un QR d'invité
-                if (qrData && qrData.type === 'GUEST') {
-                    // Enregistrer le scan dans les données de l'invité
-                    if (qrData.ceremonyId && qrData.id) {
-                        const ceremony = ceremonies.find(c => c.id === qrData.ceremonyId);
-                        if (ceremony) {
-                            const guest = ceremony.guests.find(g => g.id === qrData.id);
-                            if (guest) {
-                                if (!guest.scans) guest.scans = [];
-                                guest.scans.push({ timestamp: new Date().toISOString(), source: 'qr-scan' });
-                                const isDuplicateGuestScan = guest.scans.length > 1;
-                                if (isDuplicateGuestScan) {
-                                    alert('⚠️ DOUBLON !!! Cette même invitation a déjà été scannée.');
-                                    showAlarm('⚠️ DOUBLON', 'Cette même invitation a déjà été scannée.', 'danger');
-                                    markVerifyDuplicate();
-                                    qrData.isDuplicate = true;
-                                }
-                                localStorage.setItem('ceremonies', JSON.stringify(ceremonies));
-                                syncCeremonyToManagement(ceremony.id);
-                            }
+                if (parsed.kind === 'guest_qr') {
+                    let qrData = parsed.data;
+                    const found = findGuestInAllCeremonies({
+                        guestId: qrData.id || qrData.guest?.id,
+                        quickCode: qrData.quickCode || qrData.guest?.quickCode,
+                        ceremonyId: qrData.ceremonyId || qrData.ceremony?.id,
+                    });
+
+                    if (found) {
+                        const isDuplicate = recordGuestScan(found.ceremony, found.guest, 'qr-scan');
+                        if (isDuplicate) {
+                            alert('⚠️ DOUBLON !!! Cette même invitation a déjà été scannée.');
+                            showAlarm('⚠️ DOUBLON', 'Cette même invitation a déjà été scannée.', 'danger');
+                            markVerifyDuplicate();
+                            qrData.isDuplicate = true;
                         }
                     }
-                    displayGuestVerificationResult(qrData, resultDiv, contentDiv);
-                    document.getElementById('verifyCode').value = '';
-                    return;
-                }
 
-                // Sinon, chercher dans les visiteurs
-                let visitor = visitors.find(v => v.id === code);
-                if (!visitor && code.length === 5) {
-                    visitor = visitors.find(v => v.quickCode === code);
-                }
-                
-                // Si pas trouvé dans visiteurs, chercher dans les invités des cérémonies
-                let guestData = null;
-                if (!visitor && code.length === 5) {
-                    for (let ceremony of ceremonies) {
-                        const guest = ceremony.guests.find(g => g.quickCode === code);
-                        if (guest) {
-                            // Enregistrer le scan pour l'invité
-                            if (!guest.scans) guest.scans = [];
-                            guest.scans.push({ timestamp: new Date(), source: 'quick-code' });
-                            const isDuplicateQuickScan = guest.scans.length > 1;
-                            if (isDuplicateQuickScan) {
-                                alert('⚠️ DOUBLON !!! Cette même invitation a déjà été scannée.');
-                                showAlarm('⚠️ DOUBLON', 'Cette même invitation a déjà été scannée.', 'danger');
-                                markVerifyDuplicate();
-                            }
-
-                            guestData = {
-                                type: 'GUEST',
-                                quickCode: guest.quickCode,
-                                guest: {
-                                    firstName: guest.firstName,
-                                    lastName: guest.lastName,
-                                    honorific: guest.honorific,
-                                    seat: guest.seat,
-                                    phone: guest.phone,
-                                    personCount: guest.count || 1
-                                },
-                                ceremony: {
-                                    name: ceremony.data.name,
-                                    type: ceremony.data.type,
-                                    location: ceremony.data.location,
-                                    startDateTime: ceremony.data.startDateTime
-                                },
-                                timestamp: new Date()
-                            };
-                            if (isDuplicateQuickScan) {
-                                guestData.isDuplicate = true;
-                            }
-
-                            // Sauvegarder dans localStorage et synchroniser
-                            localStorage.setItem('ceremonies', JSON.stringify(ceremonies));
-                            syncCeremonyToManagement(ceremony.id);
-                            break;
-                        }
-                    }
-                }
-                
-                contentDiv.innerHTML = `<div id="verifyPrintBtnContainer" style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;"></div>`;
-
-                // Si c'est un invité d'une cérémonie
-                if (guestData) {
+                    showGuestVerification(qrData);
                     refreshAppViews();
-                    displayGuestVerificationResult(guestData, resultDiv, contentDiv);
-                    document.getElementById('verifyCode').value = '';
                     return;
                 }
 
-                if (!visitor) {
-                    document.getElementById('verifyPrintBtnContainer').innerHTML = '';
-                    contentDiv.innerHTML = `
-                        <div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
-                            <div style="font-size: 48px; margin-bottom: 10px;">✗</div>
-                            <div style="font-weight: 600; color: #ef4444; margin-bottom: 5px;">Code Non Trouvé</div>
-                            <p style="color: #991b1b; font-size: 14px;">Aucune invitation ne correspond à ce code</p>
-                        </div>
-                    `;
+                if (parsed.kind === 'quick_code') {
+                    const found = findGuestInAllCeremonies({ quickCode: parsed.code });
+                    if (found) {
+                        const isDuplicate = recordGuestScan(found.ceremony, found.guest, 'quick-code');
+                        if (isDuplicate) {
+                            alert('⚠️ DOUBLON !!! Cette même invitation a déjà été scannée.');
+                            showAlarm('⚠️ DOUBLON', 'Cette même invitation a déjà été scannée.', 'danger');
+                            markVerifyDuplicate();
+                        }
+                        showGuestVerification(buildGuestQRDataFromRecords(found.ceremony, found.guest, {
+                            isDuplicate: isDuplicate,
+                        }));
+                        refreshAppViews();
+                        return;
+                    }
+                }
+
+                // Chercher un invité par code brut dans toutes les cérémonies
+                const guestByRaw = findGuestInAllCeremonies({ quickCode: parsed.code });
+                if (guestByRaw) {
+                    showGuestVerification(buildGuestQRDataFromRecords(guestByRaw.ceremony, guestByRaw.guest));
+                    refreshAppViews();
                     return;
                 }
 
-                // Process visitor verification (existing code)
-                const now = new Date();
-                const startTime = (visitor.startTime instanceof Date) ? visitor.startTime : new Date(visitor.startTime);
-                const endTime = (visitor.endTime instanceof Date) ? visitor.endTime : new Date(visitor.endTime);
-                const isValid = now >= startTime && now <= endTime;
-                const isComing = now < startTime;
-                const isExpired = now > endTime;
-                const isDuplicate = visitor.category === 'ceremonie' && visitor.scans && visitor.scans.length > 0;
-
-                if (isDuplicate) {
-                    alert('⚠️ DOUBLON !!! Cette même invitation a déjà été scannée.');
-                    showAlarm('Duplication Détectée', 'Ce code QR a déjà été scanné!', 'danger');
-                    markVerifyDuplicate();
-                    visitor.isDuplicate = true;
-                }
-
-                visitor.scans.push({ timestamp: now, result: isValid ? 'approved' : 'denied', isDuplicate: isDuplicate });
-                localStorage.setItem('visitors', JSON.stringify(visitors));
-
-                accessLog.push({
-                    visitorId: visitor.id,
-                    visitorName: visitor.name,
-                    timestamp: now,
-                    result: isValid ? 'approved' : 'denied',
-                    location: visitor.location
-                });
-                localStorage.setItem('accessLog', JSON.stringify(accessLog));
-                refreshAppViews();
-                
-                displayVisitorVerificationResult(visitor, isValid, resultDiv, contentDiv);
+                contentDiv.innerHTML = `
+                    <div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">✗</div>
+                        <div style="font-weight: 600; color: #ef4444; margin-bottom: 5px;">Code Non Trouvé</div>
+                        <p style="color: #991b1b; font-size: 14px;">Aucune invitation ne correspond à ce code</p>
+                    </div>
+                `;
 
             } catch (error) {
                 console.error('Error verifying code:', error);
@@ -1892,13 +1970,20 @@
                     </div>
                 `;
             }
-            
-            document.getElementById('verifyCode').value = '';
+
+            codeInput.value = '';
         }
+
+        window.verifyCode = verifyCode;
+        window.toggleVerifyScanner = toggleVerifyScanner;
+        window.stopVerifyCamera = stopVerifyCamera;
 
         function displayGuestVerificationResult(qrData, resultDiv, contentDiv) {
             const guest = qrData.guest || {};
             const ceremony = qrData.ceremony || {};
+            const guestFirstName = guest.firstName || guest.fullName || '-';
+            const guestLastName = guest.lastName || guest.postName || '-';
+            const personCount = guest.personCount || guest.count || 1;
             const photoDisplay = guest.photo ? `<img src="${guest.photo}" alt="Photo" style="width: 120px; height: 120px; border-radius: 8px; object-fit: cover; margin-bottom: 15px;">` : '';
             const quickCodeDisplay = qrData.quickCode ? `
                         <div>
@@ -1948,11 +2033,11 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                             <div>
                                 <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Nom</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guest.lastName}</p>
+                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guestLastName}</p>
                             </div>
                             <div>
                                 <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Prénom</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guest.firstName}</p>
+                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guestFirstName}</p>
                             </div>
                         </div>
                         
@@ -1981,7 +2066,7 @@
                             </div>
                             <div>
                                 <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">👥 Personnes</p>
-                                <p style="margin: 0; background: #fff3cd; padding: 3px 8px; border-radius: 4px; display: inline-block; color: #856404; font-weight: 600;">${guest.personCount}</p>
+                                <p style="margin: 0; background: #fff3cd; padding: 3px 8px; border-radius: 4px; display: inline-block; color: #856404; font-weight: 600;">${personCount}</p>
                             </div>
                         </div>
                         ${quickCodeDisplay}
@@ -2218,64 +2303,62 @@
 
         // Actualiser le tableau de bord
         function updateDashboard() {
+            reloadAppDataFromStorage();
             const now = new Date();
-            let expiringCount = 0;
+            const todayKey = now.toDateString();
             const oneHourLater = new Date(now.getTime() + 60 * 60000);
+            const ceremonyList = Array.isArray(ceremonies) ? ceremonies : [];
 
             const activeHtml = [];
             const expiringHtml = [];
-
-            visitors.forEach(v => {
-                const startTime = parseAppDate(v.startTime);
-                const endTime = parseAppDate(v.endTime);
-                if (!startTime || !endTime) return;
-
-                if (now >= startTime && now <= endTime) {
-                    activeHtml.push(createVisitorHTML(v, false));
-                }
-
-                if (now <= endTime && endTime <= oneHourLater) {
-                    expiringCount++;
-                    expiringHtml.push(createVisitorHTML(v, true));
-                }
-            });
-
-            const ceremonyList = Array.isArray(ceremonies) ? ceremonies : [];
-            const activeCeremonyIds = new Set();
+            let totalGuests = 0;
+            let scansToday = 0;
+            let activeCeremonies = 0;
 
             ceremonyList.forEach(ceremony => {
-                if (!isCeremonyActive(ceremony, now)) return;
-                activeCeremonyIds.add(ceremony.id);
-                const data = ceremony.data || {};
-                const ceremonyName = data.name || ceremony.name || '';
-                const alreadyListed = visitors.some(v => {
-                    if (v.category !== 'ceremonie') return false;
-                    const vs = parseAppDate(v.startTime);
-                    const ve = parseAppDate(v.endTime);
-                    return vs && ve && now >= vs && now <= ve && v.name === ceremonyName;
+                const guests = ceremony.guests || [];
+                totalGuests += guests.length;
+
+                guests.forEach(guest => {
+                    (guest.scans || []).forEach(scan => {
+                        const scanDate = scan.timestamp ? new Date(scan.timestamp) : null;
+                        if (scanDate && scanDate.toDateString() === todayKey) {
+                            scansToday++;
+                        }
+                    });
                 });
-                if (!alreadyListed) {
+
+                if (isCeremonyActive(ceremony, now)) {
+                    activeCeremonies++;
                     activeHtml.push(createCeremonyDashboardHTML(ceremony));
+                }
+
+                const end = parseAppDate(ceremony.data?.endDateTime);
+                if (end && now <= end && end <= oneHourLater) {
+                    expiringHtml.push(createCeremonyDashboardHTML(ceremony));
                 }
             });
 
-            const rendezVousCount = visitors.filter(v => v.category !== 'ceremonie').length;
-            const totalGuests = ceremonyList.reduce((sum, c) => sum + (c.guests || []).length, 0);
-
-            document.getElementById('activeCount').textContent = rendezVousCount;
-            document.getElementById('totalCount').textContent = visitors.length + totalGuests;
-            document.getElementById('expiringCount').textContent = expiringCount;
-            document.getElementById('ceremonyCount').textContent = ceremonyList.length;
+            const activeEl = document.getElementById('activeCount');
+            const totalEl = document.getElementById('totalCount');
+            const expiringEl = document.getElementById('expiringCount');
+            const ceremonyEl = document.getElementById('ceremonyCount');
+            if (activeEl) activeEl.textContent = activeCeremonies;
+            if (totalEl) totalEl.textContent = totalGuests;
+            if (expiringEl) expiringEl.textContent = scansToday;
+            if (ceremonyEl) ceremonyEl.textContent = ceremonyList.length;
 
             const activeBadge = document.getElementById('activeBadge');
             const expiringBadge = document.getElementById('expiringBadge');
-            if (activeBadge) activeBadge.textContent = activeHtml.length + ' actif' + (activeHtml.length > 1 ? 's' : '');
+            if (activeBadge) activeBadge.textContent = activeHtml.length + ' active' + (activeHtml.length > 1 ? 's' : '');
             if (expiringBadge) expiringBadge.textContent = expiringHtml.length + ' alerte' + (expiringHtml.length > 1 ? 's' : '');
 
-            const emptyActive = '<div class="empty-state"><i class="fa-solid fa-user-slash"></i><p>Aucun rendez-vous actif pour le moment</p></div>';
-            const emptyExpiring = '<div class="empty-state"><i class="fa-solid fa-bell-slash"></i><p>Aucune expiration proche</p></div>';
-            document.getElementById('visitorsActive').innerHTML = activeHtml.length ? activeHtml.join('') : emptyActive;
-            document.getElementById('visitorsExpiring').innerHTML = expiringHtml.length ? expiringHtml.join('') : emptyExpiring;
+            const emptyActive = '<div class="empty-state"><i class="fa-solid fa-champagne-glasses"></i><p>Aucune cérémonie en cours pour le moment</p></div>';
+            const emptyExpiring = '<div class="empty-state"><i class="fa-solid fa-bell-slash"></i><p>Aucune cérémonie ne se termine bientôt</p></div>';
+            const visitorsActive = document.getElementById('visitorsActive');
+            const visitorsExpiring = document.getElementById('visitorsExpiring');
+            if (visitorsActive) visitorsActive.innerHTML = activeHtml.length ? activeHtml.join('') : emptyActive;
+            if (visitorsExpiring) visitorsExpiring.innerHTML = expiringHtml.length ? expiringHtml.join('') : emptyExpiring;
         }
 
         function createCeremonyDashboardHTML(ceremony) {
@@ -2356,7 +2439,7 @@
 
         // Les details du visiteur
         function showCeremonyHistoryDetails(ceremonyId) {
-            const ceremony = ceremonies.find(c => c.id === ceremonyId);
+            const ceremony = ceremonies.find(c => String(c.id) === String(ceremonyId));
             if (!ceremony) return;
 
             const ceremonyName = ceremony.data?.name || ceremony.name || `Cérémonie ${ceremony.id}`;
@@ -2389,9 +2472,65 @@
             }, 250);
         }
 
+        function reloadAppDataFromStorage() {
+            try {
+                const rawCer = localStorage.getItem('ceremonies');
+                if (rawCer !== null) {
+                    const parsed = JSON.parse(rawCer);
+                    if (Array.isArray(parsed)) ceremonies = parsed;
+                }
+                const rawManaged = localStorage.getItem('managedCeremonies');
+                if (rawManaged !== null) {
+                    const parsed = JSON.parse(rawManaged);
+                    if (Array.isArray(parsed)) managedCeremonies = parsed;
+                }
+                const rawLog = localStorage.getItem('accessLog');
+                if (rawLog !== null) {
+                    const parsed = JSON.parse(rawLog);
+                    if (Array.isArray(parsed)) accessLog = parsed;
+                }
+            } catch (e) {
+                console.warn('reloadAppDataFromStorage:', e);
+            }
+        }
+
+        function getCeremoniesForHistorySearch() {
+            reloadAppDataFromStorage();
+            return (ceremonies || []).map(cer => {
+                const mgmt = (managedCeremonies || []).find(m => String(m.id) === String(cer.id));
+                if (!mgmt?.data) return cer;
+                return {
+                    ...cer,
+                    data: { ...(cer.data || {}), ...mgmt.data },
+                };
+            });
+        }
+
+        function guestMatchesQuery(guest, queryLower) {
+            if (!guest || !queryLower) return false;
+            const combined = `${guest.firstName || ''} ${guest.lastName || ''}`.trim().toLowerCase();
+            if (combined && combined.includes(queryLower)) return true;
+            const fields = [guest.fullName, guest.full_name, guest.nom, guest.phone, guest.quickCode];
+            return fields.some(v => v && String(v).toLowerCase().includes(queryLower));
+        }
+
         // Mise a jour du journal d'accès
-        function updateAccessLog() {
-            const logHtml = accessLog.slice(-50).reverse().map(log => {
+        function updateAccessLog(filterQuery) {
+            reloadAppDataFromStorage();
+            let logs = accessLog.slice(-50).reverse();
+            if (filterQuery) {
+                const q = filterQuery.toLowerCase();
+                logs = logs.filter(log => {
+                    const name = (log.visitorName || '').toLowerCase();
+                    const loc = (log.location || '').toLowerCase();
+                    const code = (log.code || log.codeScanned || '').toLowerCase();
+                    const date = log.timestamp ? new Date(log.timestamp).toLocaleString('fr-FR').toLowerCase() : '';
+                    return name.includes(q) || loc.includes(q) || code.includes(q) || date.includes(q);
+                });
+            }
+            const logContainer = document.getElementById('accessLog');
+            if (!logContainer) return;
+            const logHtml = logs.map(log => {
                 const date = new Date(log.timestamp);
                 const approved = log.result === 'approved';
                 const icon = approved
@@ -2410,7 +2549,10 @@
                 `;
             }).join('');
 
-            document.getElementById('accessLog').innerHTML = logHtml || '<div class="empty-state"><i class="fa-solid fa-clipboard-list"></i><p>Aucun accès enregistré</p></div>';
+            const emptyMessage = filterQuery
+                ? '<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><p>Aucun accès ne correspond à la recherche</p></div>'
+                : '<div class="empty-state"><i class="fa-solid fa-clipboard-list"></i><p>Aucun accès enregistré</p></div>';
+            logContainer.innerHTML = logHtml || emptyMessage;
         }
 
         function renderHistorySearchResults(results) {
@@ -2430,8 +2572,10 @@
                 const type = ceremony.data?.type || 'N/A';
                 const start = ceremony.data?.startDateTime ? new Date(ceremony.data.startDateTime).toLocaleString('fr-FR') : 'N/A';
                 const end = ceremony.data?.endDateTime ? new Date(ceremony.data.endDateTime).toLocaleString('fr-FR') : 'N/A';
-                const matchedGuest = ceremony.guests?.find(g => g.quickCode && g.quickCode.toLowerCase().includes(queryLower)) || null;
-                const quickCodeLabel = matchedGuest ? `Code: ${matchedGuest.quickCode}` : '';
+                const matchedGuest = ceremony.guests?.find(g => guestMatchesQuery(g, queryLower)) || null;
+                const quickCodeLabel = matchedGuest?.quickCode
+                    ? `Code: ${matchedGuest.quickCode}`
+                    : (matchedGuest ? `${matchedGuest.firstName || ''} ${matchedGuest.lastName || matchedGuest.fullName || ''}`.trim() : '');
 
                 return `
                     <div class="history-result-item">
@@ -2461,9 +2605,14 @@
         }
 
         function performHistorySearch() {
-            const q = document.getElementById('historySearch').value.trim().toLowerCase();
+            const searchEl = document.getElementById('historySearch');
+            const resultsEl = document.getElementById('historyResults');
+            if (!searchEl || !resultsEl) return;
+
+            const q = searchEl.value.trim().toLowerCase();
             if (!q) {
-                document.getElementById('historyResults').innerHTML = '';
+                resultsEl.innerHTML = '';
+                updateAccessLog();
                 return;
             }
 
@@ -2477,8 +2626,9 @@
             };
 
             const parsedDate = parseDateQuery(q);
+            const searchableCeremonies = getCeremoniesForHistorySearch();
 
-            const results = ceremonies.filter(ceremony => {
+            const results = searchableCeremonies.filter(ceremony => {
                 const name = (ceremony.data?.name || ceremony.name || '').toString().toLowerCase();
                 const bride = (ceremony.data?.brideName || '').toString().toLowerCase();
                 const groom = (ceremony.data?.groomName || '').toString().toLowerCase();
@@ -2489,32 +2639,46 @@
                 const endDate = ceremony.data?.endDateTime ? new Date(ceremony.data.endDateTime) : null;
                 const startDateString = startDate ? startDate.toLocaleDateString('fr-FR') : '';
                 const endDateString = endDate ? endDate.toLocaleDateString('fr-FR') : '';
-                const guestNameMatch = ceremony.guests?.some(guest => {
-                    const fullName = `${guest.firstName || ''} ${guest.lastName || ''}`.trim().toLowerCase();
-                    return fullName.includes(queryLower);
-                });
-                const guestQuickCodeMatch = ceremony.guests?.some(guest => guest.quickCode && guest.quickCode.toLowerCase().includes(queryLower));
+                const guestMatch = ceremony.guests?.some(guest => guestMatchesQuery(guest, queryLower));
                 const dateMatch = (startDateString.includes(queryLower) || endDateString.includes(queryLower) || (startDate && startDate.toLocaleString('fr-FR').toLowerCase().includes(queryLower)) || (endDate && endDate.toLocaleString('fr-FR').toLowerCase().includes(queryLower)));
                 const parsedDateMatch = parsedDate && ((startDate && startDate.toDateString() === parsedDate.toDateString()) || (endDate && endDate.toDateString() === parsedDate.toDateString()));
 
-                return name.includes(queryLower) || bride.includes(queryLower) || groom.includes(queryLower) || location.includes(queryLower) || type.includes(queryLower) || id.includes(queryLower) || guestNameMatch || guestQuickCodeMatch || dateMatch || parsedDateMatch;
+                return name.includes(queryLower) || bride.includes(queryLower) || groom.includes(queryLower) || location.includes(queryLower) || type.includes(queryLower) || id.includes(queryLower) || guestMatch || dateMatch || parsedDateMatch;
             });
 
             renderHistorySearchResults(results);
+            updateAccessLog(q);
         }
 
         const historySearchDebounced = debounce(performHistorySearch, 200);
+        let historySearchInitialized = false;
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function initHistorySearch() {
             const searchInput = document.getElementById('historySearch');
             const clearBtn = document.getElementById('historyClearBtn');
-            if (searchInput) searchInput.addEventListener('input', historySearchDebounced);
-            if (clearBtn) clearBtn.addEventListener('click', function() {
-                if (searchInput) searchInput.value = '';
-                document.getElementById('historyResults').innerHTML = '';
-                searchInput && searchInput.focus();
-            });
-        });
+            if (!searchInput || historySearchInitialized) return;
+
+            searchInput.addEventListener('input', historySearchDebounced);
+            searchInput.addEventListener('search', performHistorySearch);
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    searchInput.value = '';
+                    const resultsEl = document.getElementById('historyResults');
+                    if (resultsEl) resultsEl.innerHTML = '';
+                    updateAccessLog();
+                    searchInput.focus();
+                });
+            }
+            historySearchInitialized = true;
+        }
+
+        (function onDocumentReady(fn) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fn);
+            } else {
+                fn();
+            }
+        })(initHistorySearch);
 
         // Systhene d'alarme pour les invitations expirées et celles qui expirent bientôt
         function startAlarmSystem() {

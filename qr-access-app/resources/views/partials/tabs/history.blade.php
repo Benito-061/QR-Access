@@ -17,3 +17,5 @@
                     </button>
                 </div>
                 <p class="history-hint">Les données proviennent des cérémonies créées dans l'onglet Ajouter une cérémonie.</p>
+                <div id="historyResults" style="margin-top: 16px;"></div>
+                <div id="accessLog" style="margin-top: 24px;"></div>

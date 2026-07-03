@@ -66,7 +66,6 @@
     @endif
 
     <p class="auth-footer" style="margin-top: 8px;">
-        Vous êtes invité à une cérémonie ?
-        <a class="auth-link" href="{{ route('invitee.login') }}">Connexion invité</a>
+        <a class="auth-link" href="{{ route('welcome') }}"><i class="fa-solid fa-arrow-left"></i> Retour au choix de connexion</a>
     </p>
 </x-auth-layout>
