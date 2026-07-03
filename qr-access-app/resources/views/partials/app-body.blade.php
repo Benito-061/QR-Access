@@ -428,7 +428,7 @@
                         </div>
                     </div>
 
-                    <div id="verifyResult" style="margin-top: 20px; display: none;">
+                    <div id="verifyResult" class="verify-result-panel">
                         <div id="verifyContent"></div>
                     </div>
                 </div>

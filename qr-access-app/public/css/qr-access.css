@@ -906,6 +906,282 @@
             color: #991b1b !important;
         }
 
+        /* ── Résultat vérification invité ── */
+        #verifyResult {
+            display: none;
+        }
+
+        #verifyResult.verify-result-panel {
+            display: block;
+            margin-top: 20px;
+            animation: verifySlideIn 0.35s ease-out;
+        }
+
+        @keyframes verifySlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .verify-result-card {
+            border-radius: 16px;
+            border: 2px solid var(--border);
+            background: var(--surface);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .verify-result-card.verify-status--valid {
+            border-color: #10b981;
+        }
+
+        .verify-result-card.verify-status--duplicate {
+            border-color: #ef4444;
+        }
+
+        .verify-result-card.verify-status--pending {
+            border-color: #f59e0b;
+        }
+
+        .verify-result-card.verify-status--expired {
+            border-color: #94a3b8;
+        }
+
+        .verify-result-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .verify-status--valid .verify-result-header {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        }
+
+        .verify-status--duplicate .verify-result-header {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        }
+
+        .verify-status--pending .verify-result-header {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        }
+
+        .verify-status--expired .verify-result-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .verify-result-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .verify-status--valid .verify-result-icon { color: #059669; }
+        .verify-status--duplicate .verify-result-icon { color: #dc2626; }
+        .verify-status--pending .verify-result-icon { color: #d97706; }
+        .verify-status--expired .verify-result-icon { color: #64748b; }
+
+        .verify-result-title {
+            margin: 0 0 4px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .verify-result-subtitle {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .verify-guest-hero {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 24px;
+            flex-wrap: wrap;
+        }
+
+        .verify-guest-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .verify-guest-name {
+            margin: 0 0 4px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .verify-guest-honorific {
+            margin: 0;
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .verify-quick-code {
+            margin-left: auto;
+            text-align: center;
+            background: #eff6ff;
+            border: 2px solid #93c5fd;
+            border-radius: 12px;
+            padding: 10px 16px;
+        }
+
+        .verify-quick-code span {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .verify-quick-code strong {
+            font-size: 22px;
+            letter-spacing: 4px;
+            color: #1d4ed8;
+        }
+
+        .verify-details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 0 24px 20px;
+        }
+
+        .verify-detail-item {
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .verify-detail-label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .verify-detail-label i {
+            margin-right: 4px;
+            color: var(--primary);
+        }
+
+        .verify-detail-value {
+            display: block;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .verify-detail-value.verify-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 2px 10px;
+            border-radius: 6px;
+        }
+
+        .verify-ceremony-box {
+            margin: 0 24px 20px;
+            padding: 16px 18px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+        }
+
+        .verify-ceremony-label {
+            margin: 0 0 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #0369a1;
+            font-weight: 700;
+        }
+
+        .verify-ceremony-name {
+            margin: 0 0 10px;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .verify-ceremony-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .verify-ceremony-meta i {
+            color: #0284c7;
+            margin-right: 4px;
+        }
+
+        .verify-ceremony-date {
+            margin: 0;
+            font-size: 13px;
+            color: #334155;
+        }
+
+        .verify-ceremony-date i {
+            color: #0284c7;
+            margin-right: 6px;
+        }
+
+        .verify-print-btn {
+            width: calc(100% - 48px);
+            margin: 0 24px 24px;
+            justify-content: center;
+        }
+
+        .scanner-panel video {
+            width: 100%;
+            max-height: 320px;
+            border-radius: 12px;
+            background: #0f172a;
+            object-fit: cover;
+        }
+
+        @media (max-width: 640px) {
+            .verify-details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .verify-quick-code {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .verify-guest-hero {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
         /* Confetti spectaculaire pour l'effet doublon */
         .cf-piece {
             position: absolute;

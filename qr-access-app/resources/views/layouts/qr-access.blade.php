@@ -20,7 +20,7 @@
         }
     </style>
     <script src="{{ asset('js/qrcode.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="{{ asset('js/jsQR.min.js') }}"></script>
     <script src="{{ asset('js/shell.js') }}"></script>
 </head>
 <body>

@@ -1606,6 +1606,7 @@
             let verifyStream = null;
             let verifyScanActive = false;
             let verifyScanAnimationId = null;
+            let verifyLastScanAt = 0;
 
             function toggleVerifyScanner() {
                 const scanner = document.getElementById('verifyScanner');
@@ -1621,24 +1622,39 @@
             function startVerifyCamera() {
                 const video = document.getElementById('verifyVideo');
                 const status = document.getElementById('verifyCameraStatus');
+                if (typeof jsQR === 'undefined') {
+                    if (status) {
+                        status.textContent = 'Scanner QR indisponible (jsQR manquant)';
+                        status.style.color = '#ef4444';
+                    }
+                    return;
+                }
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     if (status) { status.textContent = 'Navigateur ne supporte pas getUserMedia'; status.style.color = '#ef4444'; }
                     return;
                 }
 
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
                     .then(stream => {
                         verifyStream = stream;
                         video.srcObject = stream;
+                        video.setAttribute('playsinline', 'true');
+                        video.setAttribute('webkit-playsinline', 'true');
+                        const playPromise = video.play();
+                        if (playPromise && playPromise.catch) {
+                            playPromise.catch(err => console.warn('video.play:', err));
+                        }
                         document.getElementById('verifyScanner').style.display = 'block';
-                        document.getElementById('startScanBtn').textContent = '✖️';
-                        if (status) { status.textContent = 'Caméra active - recherche du QR...'; status.style.color = '#10b981'; }
+                        const scanBtn = document.getElementById('startScanBtn');
+                        if (scanBtn) scanBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                        if (status) { status.textContent = 'Caméra active — pointez vers le QR code…'; status.style.color = '#10b981'; }
                         verifyScanActive = true;
+                        verifyLastScanAt = 0;
                         scanVerifyFrame();
                     })
                     .catch(err => {
                         console.error('Erreur caméra verify:', err);
-                        if (status) { status.textContent = '❌ Erreur: accès caméra refusé.'; status.style.color = '#ef4444'; }
+                        if (status) { status.textContent = 'Accès caméra refusé — autorisez la caméra dans le navigateur.'; status.style.color = '#ef4444'; }
                     });
             }
 
@@ -1664,6 +1680,11 @@
                 if (!verifyScanActive) return;
                 if (!video || !canvas) return;
 
+                if (typeof jsQR === 'undefined') {
+                    verifyScanAnimationId = requestAnimationFrame(scanVerifyFrame);
+                    return;
+                }
+
                 if (video.readyState !== video.HAVE_ENOUGH_DATA) {
                     verifyScanAnimationId = requestAnimationFrame(scanVerifyFrame);
                     return;
@@ -1671,17 +1692,28 @@
 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 try {
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
                     if (code && code.data) {
-                        document.getElementById('verifyCode').value = code.data;
+                        const now = Date.now();
+                        if (now - verifyLastScanAt < 2500) {
+                            verifyScanAnimationId = requestAnimationFrame(scanVerifyFrame);
+                            return;
+                        }
+                        verifyLastScanAt = now;
+                        const scanned = code.data.trim();
+                        const input = document.getElementById('verifyCode');
+                        if (input) input.value = scanned;
                         stopVerifyCamera();
                         const status = document.getElementById('verifyCameraStatus');
-                        if (status) { status.textContent = 'QR détecté'; status.style.color = '#10b981'; }
-                        setTimeout(() => { verifyCode(); }, 200);
+                        if (status) { status.textContent = 'QR détecté — vérification…'; status.style.color = '#10b981'; }
+                        const runVerify = window.verifyCode || verifyCode;
+                        if (typeof runVerify === 'function') {
+                            setTimeout(() => runVerify(), 150);
+                        }
                         return;
                     }
                 } catch (e) {
@@ -1715,6 +1747,12 @@
 
                 if (trimmed.includes('%7B') || trimmed.includes('%22')) {
                     parsed = tryJson(decodeURIComponent(trimmed));
+                    if (parsed) return parsed;
+                }
+
+                const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    parsed = tryJson(jsonMatch[0]);
                     if (parsed) return parsed;
                 }
 
@@ -1849,8 +1887,7 @@
             if (!resultDiv || !contentDiv) return;
 
             resultDiv.style.display = 'block';
-            resultDiv.classList.remove('duplicate-blink');
-            resultDiv.classList.remove('verify-duplicate-result');
+            resultDiv.classList.remove('duplicate-blink', 'verify-duplicate-result', 'verify-status--valid', 'verify-status--duplicate', 'verify-status--pending', 'verify-status--expired');
             if (verifyCard) verifyCard.classList.remove('verify-duplicate-card');
             if (verifyButton) {
                 verifyButton.innerHTML = '<i class="fa-solid fa-check"></i> Vérifier';
@@ -1890,6 +1927,7 @@
             function showGuestVerification(qrData) {
                 const enriched = enrichGuestQRData(qrData);
                 displayGuestVerificationResult(enriched, resultDiv, contentDiv);
+                resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 codeInput.value = '';
             }
 
@@ -1970,118 +2008,100 @@
         window.toggleVerifyScanner = toggleVerifyScanner;
         window.stopVerifyCamera = stopVerifyCamera;
 
+        function escapeVerifyHtml(value) {
+            return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function getGuestVerificationStatus(qrData) {
+            if (qrData.isDuplicate) {
+                return { className: 'verify-status--duplicate', icon: 'fa-circle-xmark', label: 'Doublon détecté', hint: 'Cette invitation a déjà été scannée' };
+            }
+            const ceremony = qrData.ceremony || {};
+            const start = ceremony.startDateTime ? new Date(ceremony.startDateTime) : null;
+            const end = ceremony.endDateTime ? new Date(ceremony.endDateTime) : null;
+            const now = new Date();
+            if (start && now < start) {
+                return { className: 'verify-status--pending', icon: 'fa-clock', label: 'Pas encore valide', hint: 'La cérémonie n\'a pas encore commencé' };
+            }
+            if (end && now > end) {
+                return { className: 'verify-status--expired', icon: 'fa-hourglass-end', label: 'Invitation expirée', hint: 'La période de la cérémonie est terminée' };
+            }
+            return { className: 'verify-status--valid', icon: 'fa-circle-check', label: 'Accès autorisé', hint: 'Invitation valide pour cette cérémonie' };
+        }
+
         function displayGuestVerificationResult(qrData, resultDiv, contentDiv) {
             const guest = qrData.guest || {};
             const ceremony = qrData.ceremony || {};
-            const guestFirstName = guest.firstName || guest.fullName || '-';
-            const guestLastName = guest.lastName || guest.postName || '-';
+            const status = getGuestVerificationStatus(qrData);
+            const guestFirstName = guest.firstName || guest.fullName || '—';
+            const guestLastName = guest.lastName || guest.postName || '—';
             const personCount = guest.personCount || guest.count || 1;
-            const photoDisplay = guest.photo ? `<img src="${guest.photo}" alt="Photo" style="width: 120px; height: 120px; border-radius: 8px; object-fit: cover; margin-bottom: 15px;">` : '';
-            const quickCodeDisplay = qrData.quickCode ? `
-                        <div>
-                            <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Code Rapide</p>
-                            <p style="margin: 0; font-weight: 700; font-size: 18px; color: #0ea5e9; letter-spacing: 2px;">${qrData.quickCode}</p>
-                        </div>
-                    ` : '';
-            const verificationLabel = qrData.quickCode ? 'Code Rapide de l\'invité' : 'Code QR de l\'invité';
-            
-            const now = new Date();
-            const timestamp = qrData.timestamp ? new Date(qrData.timestamp) : now;
-            const isRecent = (now - timestamp) < 3600000; // Moins d'1 heure
-            
-            const isDuplicate = qrData.isDuplicate;
-            const statusColor = isDuplicate ? '#ef4444' : (isRecent ? '#10b981' : '#f59e0b');
-            const statusIcon = isDuplicate ? '✗' : (isRecent ? '✓' : '⏱️');
-            const statusText = isDuplicate ? 'Refuser' : (isRecent ? 'Valide' : 'Expiré');
+            const fullName = `${guestFirstName} ${guestLastName}`.trim();
 
-            // Formater la date de la cérémonie
-            let eventDateDisplay = '-';
+            let eventDateDisplay = '—';
             if (ceremony.startDateTime) {
-                const eventDate = new Date(ceremony.startDateTime);
-                eventDateDisplay = eventDate.toLocaleDateString('fr-FR', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                eventDateDisplay = new Date(ceremony.startDateTime).toLocaleDateString('fr-FR', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
                 });
             }
 
-            contentDiv.innerHTML = `
-                <div style="background: linear-gradient(135deg, ${statusColor}20 0%, ${statusColor}10 100%); border: 2px solid ${statusColor}; border-radius: 12px; padding: 25px; text-align: center;">
-                    <div style="font-size: 56px; margin-bottom: 15px;">${statusIcon}</div>
-                    <div style="font-weight: 700; font-size: 20px; color: ${statusColor}; margin-bottom: 5px;">${statusText}</div>
-                    <p style="color: #64748b; font-size: 13px; margin-bottom: 20px;">${verificationLabel}</p>
-                    
-                    <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; text-align: left;">
-                        <!-- Photo de l'invité -->
-                        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb;">
-                            ${photoDisplay}
-                            <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase;">📸 Photo Invité</p>
-                        </div>
+            resultDiv.className = 'verify-result-panel ' + status.className;
 
-                        <!-- Informations personnelles -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Nom</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guestLastName}</p>
-                            </div>
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Prénom</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guestFirstName}</p>
-                            </div>
+            contentDiv.innerHTML = `
+                <div class="verify-result-card ${status.className}">
+                    <div class="verify-result-header">
+                        <div class="verify-result-icon"><i class="fa-solid ${status.icon}"></i></div>
+                        <div>
+                            <h3 class="verify-result-title">${escapeVerifyHtml(status.label)}</h3>
+                            <p class="verify-result-subtitle">${escapeVerifyHtml(status.hint)}</p>
                         </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Post-nom</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #1f2937;">${guest.postName || '-'}</p>
-                            </div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Titre</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 14px; color: #0ea5e9;">${guest.honorific || '-'}</p>
-                            </div>
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Place</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 14px; color: #1f2937;">${guest.seat || '-'}</p>
-                            </div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Téléphone</p>
-                                <p style="margin: 0; font-weight: 600; font-size: 14px; color: #1f2937;">${guest.phone || '-'}</p>
-                            </div>
-                            <div>
-                                <p style="margin: 0 0 5px 0; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">👥 Personnes</p>
-                                <p style="margin: 0; background: #fff3cd; padding: 3px 8px; border-radius: 4px; display: inline-block; color: #856404; font-weight: 600;">${personCount}</p>
-                            </div>
-                        </div>
-                        ${quickCodeDisplay}
                     </div>
-                    
-                    <!-- Informations de la cérémonie -->
-                    <div style="background: #f0f9ff; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
-                        <p style="margin: 0 0 8px 0; color: #0c4a6e; font-size: 12px; font-weight: 600; text-transform: uppercase;">🎉 Cérémonie</p>
-                        <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 16px; color: #1f2937;">${ceremony.name}</p>
-                        <p style="margin: 0 0 5px 0; color: #64748b; font-size: 13px;">
-                            <strong>Type:</strong> ${ceremony.type} | 
-                            <strong>Lieu:</strong> ${ceremony.location}
-                        </p>
-                        <p style="margin: 0; color: #64748b; font-size: 13px;">
-                            <strong>📅 Date & Heure:</strong> ${eventDateDisplay}
-                        </p>
+
+                    <div class="verify-guest-hero">
+                        <div class="verify-guest-avatar"><i class="fa-solid fa-user"></i></div>
+                        <div>
+                            <p class="verify-guest-name">${escapeVerifyHtml(fullName)}</p>
+                            <p class="verify-guest-honorific">${escapeVerifyHtml(guest.honorific || 'Invité')}</p>
+                        </div>
+                        ${qrData.quickCode ? `<div class="verify-quick-code"><span>Code</span><strong>${escapeVerifyHtml(qrData.quickCode)}</strong></div>` : ''}
                     </div>
-                    
-                    <button id="verifyPrintBtnGuest" data-qr="${encodeURIComponent(JSON.stringify(qrData))}" class="btn btn-primary" style="width: 100%;">🖨️ Imprimer</button>
+
+                    <div class="verify-details-grid">
+                        <div class="verify-detail-item">
+                            <span class="verify-detail-label"><i class="fa-solid fa-chair"></i> Place</span>
+                            <span class="verify-detail-value">${escapeVerifyHtml(guest.seat || '—')}</span>
+                        </div>
+                        <div class="verify-detail-item">
+                            <span class="verify-detail-label"><i class="fa-solid fa-users"></i> Personnes</span>
+                            <span class="verify-detail-value verify-badge">${personCount}</span>
+                        </div>
+                        <div class="verify-detail-item">
+                            <span class="verify-detail-label"><i class="fa-solid fa-phone"></i> Téléphone</span>
+                            <span class="verify-detail-value">${escapeVerifyHtml(guest.phone || '—')}</span>
+                        </div>
+                        <div class="verify-detail-item">
+                            <span class="verify-detail-label"><i class="fa-solid fa-id-card"></i> Post-nom</span>
+                            <span class="verify-detail-value">${escapeVerifyHtml(guest.postName || '—')}</span>
+                        </div>
+                    </div>
+
+                    <div class="verify-ceremony-box">
+                        <p class="verify-ceremony-label"><i class="fa-solid fa-champagne-glasses"></i> Cérémonie</p>
+                        <p class="verify-ceremony-name">${escapeVerifyHtml(ceremony.name || '—')}</p>
+                        <div class="verify-ceremony-meta">
+                            <span><i class="fa-solid fa-masks-theater"></i> ${escapeVerifyHtml(ceremony.type || '—')}</span>
+                            <span><i class="fa-solid fa-location-dot"></i> ${escapeVerifyHtml(ceremony.location || '—')}</span>
+                        </div>
+                        <p class="verify-ceremony-date"><i class="fa-solid fa-calendar"></i> ${escapeVerifyHtml(eventDateDisplay)}</p>
+                    </div>
+
+                    <button type="button" id="verifyPrintBtnGuest" data-qr="${encodeURIComponent(JSON.stringify(qrData))}" class="btn btn-primary verify-print-btn">
+                        <i class="fa-solid fa-print"></i> Imprimer le reçu
+                    </button>
                 </div>
             `;
 
-            // Attacher un écouteur sécurisé au bouton d'impression (évite les problèmes de quoting dans l'onclick inline)
             try {
                 const printBtn = contentDiv.querySelector('#verifyPrintBtnGuest');
                 if (printBtn) {
