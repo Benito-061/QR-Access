@@ -31,7 +31,11 @@ class CeremonyManagement extends Model
 
     public function toLegacyArray(): array
     {
-        $ceremonyData = $this->ceremony?->toLegacyArray()['data'] ?? [];
+        $ceremonyData = [];
+        if ($this->ceremony) {
+            $legacy = $this->ceremony->toLegacyArray();
+            $ceremonyData = $legacy['data'] ?? [];
+        }
 
         return [
             'id' => $this->ceremony_id,

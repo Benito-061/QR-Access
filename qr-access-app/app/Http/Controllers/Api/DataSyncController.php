@@ -22,7 +22,7 @@ class DataSyncController extends Controller
         $user = $request->user();
 
         $ceremonies = Ceremony::where('user_id', $user->id)
-            ->with(['guests.scans', 'management', 'organizers'])
+            ->with(['guests.scans', 'management.ceremony', 'organizers'])
             ->orderBy('id')
             ->get();
 

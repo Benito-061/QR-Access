@@ -8,7 +8,7 @@
         default => null,
     };
     $notifyError = session('notify_error');
-    if (isset($errors) && $errors->any() && ! $notifyError) {
+    if (! $notifyError && isset($errors) && is_object($errors) && method_exists($errors, 'any') && $errors->any()) {
         $notifyError = $errors->first();
     }
 @endphp
