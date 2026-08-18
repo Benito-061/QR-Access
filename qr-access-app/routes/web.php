@@ -10,46 +10,16 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\VerifyPageController;
 use Illuminate\Support\Facades\Route;
 
-/** Diagnostic temporaire — supprimer après résolution des problèmes serveur */
-Route::get('/server-check', function () {
-    $lines = [
-        '=== QR Access — Diagnostic ===',
-        'Date: ' . now()->toIso8601String(),
-        'PHP: ' . PHP_VERSION,
-        'SAPI: ' . php_sapi_name(),
-        'base_path: ' . base_path(),
-        'public_path: ' . public_path(),
-        'storage_path: ' . storage_path(),
-        'storage writable: ' . (is_writable(storage_path()) ? 'oui' : 'NON'),
-        'sessions dir writable: ' . (is_writable(storage_path('framework/sessions')) ? 'oui' : 'NON'),
-        'APP_ENV: ' . config('app.env'),
-        'APP_DEBUG: ' . (config('app.debug') ? 'true' : 'false'),
-        'APP_URL: ' . config('app.url'),
-        'SESSION_DRIVER: ' . config('session.driver'),
-        'CACHE_STORE: ' . config('cache.default'),
-        'DB connection: ' . config('database.default'),
-    ];
-
-    try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
-        $lines[] = 'DB: connecté';
-    } catch (Throwable $e) {
-        $lines[] = 'DB ERREUR: ' . $e->getMessage();
-    }
-
-    $lines[] = '';
-    $lines[] = '=== Fin ===';
-
-    return response(implode("\n", $lines), 200, ['Content-Type' => 'text/plain; charset=utf-8']);
-});
-
 Route::get('/', function () {
-    if (session()->has('invitee_guest_id')) {
-        return redirect()->route('invitee.gift');
-    }
-
-    if (auth()->check()) {
-        return redirect()->route('dashboard');
+    try {
+        if (session()->has('invitee_guest_id')) {
+            return redirect()->route('invitee.gift');
+        }
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+    } catch (Throwable $e) {
+        report($e);
     }
 
     return view('welcome');
