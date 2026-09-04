@@ -650,3 +650,15 @@
 
 
     
+
+<!-- Rapport de téléchargements -->
+<div id="downloads" class="tab-content pro-page{{ $active === 'downloads' ? ' active' : '' }}"@if($active === 'downloads') style="display:block"@endif>
+    <div class="page-header"><div><h1 class="page-title">Rapport de téléchargements</h1><p class="page-subtitle">Historique des exports générés depuis votre compte</p></div><button type="button" class="btn btn-primary btn-small" onclick="exportDownloadLog()"><i class="fa-solid fa-file-csv"></i> Exporter CSV</button></div>
+    <div class="card"><div class="card-header"><h2><i class="fa-solid fa-file-arrow-down"></i> Téléchargements récents</h2></div><div id="downloadReportList" class="table-scroll-wrap"></div></div>
+</div>
+
+<!-- Corbeille -->
+<div id="trash" class="tab-content pro-page{{ $active === 'trash' ? ' active' : '' }}"@if($active === 'trash') style="display:block"@endif>
+    <div class="page-header"><div><h1 class="page-title">Corbeille</h1><p class="page-subtitle">Restaurez les cérémonies et invités supprimés.</p></div></div>
+    <div class="card"><div class="card-header"><h2><i class="fa-solid fa-trash-can"></i> Éléments supprimés</h2></div><div id="trashList" class="table-scroll-wrap"></div></div>
+</div>
